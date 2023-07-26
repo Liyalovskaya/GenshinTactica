@@ -80,6 +80,10 @@ Shader "SimpleURPToonLitExample(With Outline)"
         [NoScaleOffset]_OutlineZOffsetMaskTex("_OutlineZOffsetMask (black is apply ZOffset)", 2D) = "black" {}
         _OutlineZOffsetMaskRemapStart("_OutlineZOffsetMaskRemapStart", Range(0,1)) = 0
         _OutlineZOffsetMaskRemapEnd("_OutlineZOffsetMaskRemapEnd", Range(0,1)) = 1
+        
+        [Header(Stencil)]
+        _StencilRef("_StencilRef", Integer) = 1
+        
     }
     SubShader
     {       
@@ -118,6 +122,17 @@ Shader "SimpleURPToonLitExample(With Outline)"
         // Shades GI, all lights, emission and fog in a single pass.
         // Compared to Builtin pipeline forward renderer, URP forward renderer will
         // render a scene with multiple lights with less drawcalls and less overdraw.
+        
+//        Pass
+//        {
+//            Stencil
+//            {
+//                Ref [_StencilRef]    
+//            }
+//        }
+        
+        
+        
         Pass
         {               
             Name "ForwardLit"
@@ -136,7 +151,7 @@ Shader "SimpleURPToonLitExample(With Outline)"
             ZTest LEqual
             ZWrite On
             Blend One Zero
-
+            
             HLSLPROGRAM
 
             // ---------------------------------------------------------------------------------------------
