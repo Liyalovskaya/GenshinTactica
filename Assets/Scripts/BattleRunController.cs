@@ -8,6 +8,11 @@ public class BattleRunController : MonoBehaviour
     [SerializeField] private ActorController actor;
     [SerializeField] private Transform camFollowTarget;
 
+    private void Awake()
+    {
+        Application.targetFrameRate = 170;
+    }
+
     private void Update()
     {
         if (Input.GetMouseButtonDown(0))
