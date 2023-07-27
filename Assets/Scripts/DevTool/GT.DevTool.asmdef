@@ -1,0 +1,17 @@
+{
+    "name": "GT.DevTool",
+    "rootNamespace": "GT",
+    "references": [
+        "GUID:48bfd253f39c9e3408c94bdc3c0393e7",
+        "GUID:d3ed19d5c4c37b443b70fc1c968c1561"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

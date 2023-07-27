@@ -123,15 +123,6 @@ Shader "SimpleURPToonLitExample(With Outline)"
         // Compared to Builtin pipeline forward renderer, URP forward renderer will
         // render a scene with multiple lights with less drawcalls and less overdraw.
         
-//        Pass
-//        {
-//            Stencil
-//            {
-//                Ref [_StencilRef]    
-//            }
-//        }
-        
-        
         
         Pass
         {               
@@ -145,6 +136,14 @@ Shader "SimpleURPToonLitExample(With Outline)"
                 "LightMode" = "UniversalForward"
             }
 
+            Stencil
+            {
+                Ref [_StencilRef]
+                Comp Always
+                Pass Replace
+            }
+            
+            
             // explict render state to avoid confusion
             // you can expose these render state to material inspector if needed (see URP's Lit.shader)
             Cull Back

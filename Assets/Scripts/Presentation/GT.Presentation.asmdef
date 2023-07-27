@@ -1,0 +1,16 @@
+{
+    "name": "GT.Presentation",
+    "rootNamespace": "GT",
+    "references": [
+        "GUID:d3ed19d5c4c37b443b70fc1c968c1561"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
