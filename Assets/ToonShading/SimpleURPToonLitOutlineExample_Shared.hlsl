@@ -103,6 +103,7 @@ CBUFFER_START(UnityPerMaterial)
     half3   _IndirectLightMinColor;
     half    _CelShadeMidPoint;
     half    _CelShadeSoftness;
+    half    _DirectLightMultiplier;
 
     // shadow mapping
     half    _ReceiveShadowMappingAmount;
@@ -330,7 +331,7 @@ half3 ShadeAllLights(ToonSurfaceData surfaceData, ToonLightingData lightingData)
 #endif 
 
     // Main light
-    half3 mainLightResult = ShadeSingleLight(surfaceData, lightingData, mainLight, false);
+    half3 mainLightResult = ShadeSingleLight(surfaceData, lightingData, mainLight, false, _DirectLightMultiplier);
 
     //==============================================================================================
     // All additional lights

@@ -17,36 +17,86 @@ namespace GT.Core
         {
             return battleGrids.FirstOrDefault(grid => grid.x == x && grid.y == y);
         }
-        
+
         public List<BattleGrid> Dijkstra(BattleGrid g1, BattleGrid g2)
         {
             var num = battleGrids.Count;
+            var dist = new int[num];
+            var visited = new bool[num];
+            var prev = new int[num];
+
+            for (int i = 0; i < num; i++)
+            {
+                dist[i] = 0x3f3f3f3f;
+                prev[i] = -1;
+                visited[i] = false;
+            }
+
+            dist[g1.idx] = 0;
+
+            for (int i = 0; i < num - 1; i++)
+            {
+                var u = MinDistance(dist, visited, num);
+                visited[u] = true;
+                for (int j = 0; j < battleGrids[u].neighbors.Count; j++)
+                {
+                    var neigbor = battleGrids[u].neighbors[j];
+                    if (!visited[neigbor.end] && neigbor.weight != 0 && dist[u] != 0x3f3f3f3f &&
+                        dist[u] + neigbor.weight < dist[neigbor.end]
+                       )
+                    {
+                        dist[neigbor.end] = dist[u] + neigbor.weight;
+                        prev[neigbor.end] = u;
+                    }
+                }
+            }
+
+            if (dist[g2.idx] != 0x3f3f3f3f)
+            {
+                var result = new List<BattleGrid>();
+                var pathIdx = g2.idx;
+                while (pathIdx != g1.idx)
+                {
+                    result.Add(battleGrids[pathIdx]);
+                    pathIdx = prev[pathIdx];
+                }
+                result.Reverse();
+                return result;
+            }
+            else
+            {
+                return null;
+            }
             
-            
-            
-            
-            
-            
-            var result = new List<BattleGrid>();
-            
-            
-            
-            
-            return result;
+
+        }
+
+        private int MinDistance(int[] dist, bool[] visited, int num)
+        {
+            float min = 0x3f3f3f3f;
+            var minIdx = -1;
+            for (int i = 0; i < num; i++)
+            {
+                if (visited[i] == false && dist[i] <= min)
+                {
+                    min = dist[i];
+                    minIdx = i;
+                }
+            }
+
+            return minIdx;
         }
     }
 
     [Serializable]
     public class BattleGrid
     {
-        private int _idx;
-        public int x, y, height;
-        
-        public Dictionary<BattleGrid, float> Connections = new Dictionary<BattleGrid, float>();
+        public int idx, x, y, height;
+        public List<GridNeighbor> neighbors = new List<GridNeighbor>();
 
         public BattleGrid(int idx, int x, int y, int height)
         {
-            _idx = idx;
+            this.idx = idx;
             this.x = x;
             this.y = y;
             this.height = height;
@@ -56,8 +106,23 @@ namespace GT.Core
         {
             return (new Vector2(x, y) - new Vector2(grid.x, grid.y)).magnitude;
         }
-    }
-    
-    
 
+        public string CoordinateToString()
+        {
+            return $"({x},{y})";
+        }
+    }
+
+    [Serializable]
+    public class GridNeighbor
+    {
+        public int end;
+        public int weight;
+
+        public GridNeighbor(int e, int w)
+        {
+            end = e;
+            weight = w;
+        }
+    }
 }

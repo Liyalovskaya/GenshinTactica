@@ -95,6 +95,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Alpha: 0.25
     - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _Blend: 2
@@ -126,7 +127,7 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 0
     m_Colors:
-    - _BaseColor: {r: 7.129739, g: 7.129739, b: 7.129739, a: 1}
+    - _BaseColor: {r: 8.800361, g: 8.800361, b: 8.800361, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}

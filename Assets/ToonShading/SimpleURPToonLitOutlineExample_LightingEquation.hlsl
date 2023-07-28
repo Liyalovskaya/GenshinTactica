@@ -23,7 +23,7 @@ half3 ShadeGI(ToonSurfaceData surfaceData, ToonLightingData lightingData)
 
 // Most important part: lighting equation, edit it according to your needs, write whatever you want here, be creative!
 // This function will be used by all direct lights (directional/point/spot)
-half3 ShadeSingleLight(ToonSurfaceData surfaceData, ToonLightingData lightingData, Light light, bool isAdditionalLight)
+half3 ShadeSingleLight(ToonSurfaceData surfaceData, ToonLightingData lightingData, Light light, bool isAdditionalLight, float directMul = 1)
 {
     half3 N = lightingData.normalWS;
     half3 L = light.direction;
@@ -55,7 +55,7 @@ half3 ShadeSingleLight(ToonSurfaceData surfaceData, ToonLightingData lightingDat
 
     // saturate() light.color to prevent over bright
     // additional light reduce intensity since it is additive
-    return saturate(light.color) * lightAttenuationRGB * (isAdditionalLight ? 0.25 : 1);
+    return saturate(light.color) * lightAttenuationRGB * (isAdditionalLight ? 0.25 : directMul);
 }
 
 half3 ShadeEmission(ToonSurfaceData surfaceData, ToonLightingData lightingData)

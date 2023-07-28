@@ -1,5 +1,19 @@
 {
   "dependencies": {
+    "com.cysharp.unitask": {
+      "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "d210e3d76adc0cce77f4ad2af1ade88dad6b1d5a"
+    },
+    "com.github.salyu9.untitledconfigdatabuilder": {
+      "version": "https://github.com/salyu9/Untitled.ConfigDataBuilder.git#v0.1.14",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "797d81b73c947eae5d07073de7200cdd991540b9"
+    },
     "com.unity.ai.navigation": {
       "version": "1.0.0-exp.4",
       "depth": 0,

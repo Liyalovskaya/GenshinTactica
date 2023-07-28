@@ -8,6 +8,7 @@ namespace GT.Core
     public class BattleRun
     {
         public BattleMap BattleMap;
+        public List<Actor> Actors = new List<Actor>();
 
         public BattleRun(BattleMap map)
         {
@@ -15,31 +16,25 @@ namespace GT.Core
             BuildConnection();
         }
 
-        // private void BuildConnections(BattleMap map)
-        // {
-        //     foreach (var grid in map.battleGrids)
-        //     {
-        //         grid.Connections = new Dictionary<BattleGrid, float>();
-        //     }
-        //     foreach (var connection in map.gridConnections)
-        //     {
-        //         Debug.Log($"({connection.g1.x},{connection.g1.y}) to ({connection.g2.x},{connection.g2.y})");
-        //         connection.g1.Connections ??= new Dictionary<BattleGrid, float>();
-        //         connection.g1.Connections.Add(connection.g2, connection.distance);
-        //     }
-        // }
+        public void SetActor(Actor actor)
+        {
+            Actors.Add(actor);
+        }
+        
+        
         public void BuildConnection()
         {
             foreach (var grid in BattleMap.battleGrids)
             {
-                grid.Connections ??= new Dictionary<BattleGrid, float>();
+                grid.neighbors.Clear();
+                grid.neighbors = new List<GridNeighbor>();
                 foreach (var other in BattleMap.battleGrids.Where(other =>
                              !other.Equals(grid) && grid.DistanceTo(other) < 1.5f))
                 {
                     if (other.x == grid.x || other.y == grid.y)
                     {
                         // map.gridConnections.Add(new Connection(grid, other, 1));
-                        grid.Connections.Add(other, 1);
+                        grid.neighbors.Add(new GridNeighbor(other.idx, 100));
                     }
                     else
                     {
@@ -48,7 +43,7 @@ namespace GT.Core
                         if (BattleMap.GetGrid(grid.x + offsetX, grid.y) == null) continue;
                         if (BattleMap.GetGrid(grid.x, grid.y + offsetY) == null) continue;
                         // map.gridConnections.Add(new Connection(grid, other, 1.414f));
-                        grid.Connections.Add(other, 1.414f);
+                        grid.neighbors.Add(new GridNeighbor(other.idx, 141));
                     }
                 }
             }
