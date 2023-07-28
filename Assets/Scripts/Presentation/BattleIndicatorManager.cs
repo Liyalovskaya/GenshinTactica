@@ -71,7 +71,7 @@ namespace GT.Presentation
                 {
                     if (_cIndicators.TryGetValue(hit.collider, out var target))
                     {
-                        var path = BattleRun.BattleMap.Dijkstra(BattleRun.Actors[0].BattleGrid, target.BattleGrid);
+                        var path = BattleRun.BattleMap.ShortestPath(BattleRun.Actors[0].BattleGrid, target.BattleGrid);
                         SelectedInd = target;
                         ShowPath(BattleRun.Actors[0].BattleGrid, path);
                         if (Input.GetMouseButtonDown(0))
@@ -96,11 +96,11 @@ namespace GT.Presentation
             {
                 if (i == 0)
                 {
-                    _pathLine.SetPosition(i, new Vector3(start.x, .05f, start.y));
+                    _pathLine.SetPosition(i, new Vector3(start.x, .06f, start.y));
                 }
                 else
                 {
-                    _pathLine.SetPosition(i, new Vector3(grids[i - 1].x, .05f, grids[i - 1].y));
+                    _pathLine.SetPosition(i, new Vector3(grids[i - 1].x, .06f, grids[i - 1].y));
                 }
             }
         }

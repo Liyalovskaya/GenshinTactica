@@ -11,8 +11,8 @@ namespace GT.Presentation
 
         public BattleRun BattleRun;
         public bool moveMode = false;
-        
-        
+
+
         private void Awake()
         {
             Application.targetFrameRate = 170;
@@ -25,25 +25,18 @@ namespace GT.Presentation
 
         private void Update()
         {
-            // if (Input.GetMouseButtonDown(0))
-            // {
-            //     if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out var hit, 100))
-            //     {
-            //         actor.MoveTo(hit.point);
-            //     }
-            // }
-
             if (Input.GetKeyDown(KeyCode.A))
             {
-                BattleIndicatorManager.Instance.ShowInds(BattleRun.BattleMap.battleGrids);
+                BattleIndicatorManager.Instance.ShowInds(
+                    BattleRun.BattleMap.GridsInRange(BattleRun.Actors[0].BattleGrid, BattleRun.Actors[0].MoveRange));
                 moveMode = true;
             }
+
             if (Input.GetKeyDown(KeyCode.S))
             {
                 BattleIndicatorManager.Instance.HideInds();
                 moveMode = false;
             }
-            
         }
 
         private void LateUpdate()

@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Serialization;
-using Vector3 = System.Numerics.Vector3;
 
 namespace GT.Core
 {
@@ -18,7 +16,54 @@ namespace GT.Core
             return battleGrids.FirstOrDefault(grid => grid.x == x && grid.y == y);
         }
 
-        public List<BattleGrid> Dijkstra(BattleGrid g1, BattleGrid g2)
+        public List<BattleGrid> GridsInRange(BattleGrid start, float range)
+        {
+            var num = battleGrids.Count;
+            var dist = new int[num];
+            var visited = new bool[num];
+            var prev = new int[num];
+
+            for (int i = 0; i < num; i++)
+            {
+                dist[i] = 0x3f3f3f3f;
+                prev[i] = -1;
+                visited[i] = false;
+            }
+
+            dist[start.idx] = 0;
+
+            for (int i = 0; i < num - 1; i++)
+            {
+                var u = MinDistance(dist, visited, num);
+                visited[u] = true;
+                for (int j = 0; j < battleGrids[u].neighbors.Count; j++)
+                {
+                    var neigbor = battleGrids[u].neighbors[j];
+                    if (!visited[neigbor.end] && neigbor.weight != 0 && dist[u] != 0x3f3f3f3f &&
+                        dist[u] + neigbor.weight < dist[neigbor.end]
+                       )
+                    {
+                        dist[neigbor.end] = dist[u] + neigbor.weight;
+                        prev[neigbor.end] = u;
+                    }
+                }
+            }
+
+            var result = new List<BattleGrid>();
+
+
+            for (int i = 0; i < num; i++)
+            {
+                if (i != start.idx && dist[i] / 100f < range)
+                {
+                    result.Add(battleGrids[i]);
+                }
+            }
+
+            return result;
+        }
+
+        public List<BattleGrid> ShortestPath(BattleGrid g1, BattleGrid g2)
         {
             var num = battleGrids.Count;
             var dist = new int[num];
@@ -60,6 +105,7 @@ namespace GT.Core
                     result.Add(battleGrids[pathIdx]);
                     pathIdx = prev[pathIdx];
                 }
+
                 result.Reverse();
                 return result;
             }
@@ -67,8 +113,6 @@ namespace GT.Core
             {
                 return null;
             }
-            
-
         }
 
         private int MinDistance(int[] dist, bool[] visited, int num)
@@ -110,6 +154,11 @@ namespace GT.Core
         public string CoordinateToString()
         {
             return $"({x},{y})";
+        }
+
+        public Vector3 GetXYPosition()
+        {
+            return new Vector3(x, 0, y);
         }
     }
 
