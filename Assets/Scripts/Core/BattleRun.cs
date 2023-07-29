@@ -9,6 +9,7 @@ namespace GT.Core
     {
         public BattleMap BattleMap;
         public List<Actor> Actors = new List<Actor>();
+        public Actor CurrentActor;
 
         public BattleRun(BattleMap map)
         {
@@ -26,7 +27,7 @@ namespace GT.Core
         {
             foreach (var grid in BattleMap.battleGrids)
             {
-                grid.neighbors.Clear();
+                grid.neighbors?.Clear();
                 grid.neighbors = new List<GridNeighbor>();
                 foreach (var other in BattleMap.battleGrids.Where(other =>
                              !other.Equals(grid) && grid.DistanceTo(other) < 1.5f))
@@ -34,7 +35,7 @@ namespace GT.Core
                     if (other.x == grid.x || other.y == grid.y)
                     {
                         // map.gridConnections.Add(new Connection(grid, other, 1));
-                        grid.neighbors.Add(new GridNeighbor(other.idx, 100));
+                        grid.neighbors.Add(new GridNeighbor(other,100));
                     }
                     else
                     {
@@ -43,7 +44,7 @@ namespace GT.Core
                         if (BattleMap.GetGrid(grid.x + offsetX, grid.y) == null) continue;
                         if (BattleMap.GetGrid(grid.x, grid.y + offsetY) == null) continue;
                         // map.gridConnections.Add(new Connection(grid, other, 1.414f));
-                        grid.neighbors.Add(new GridNeighbor(other.idx, 141));
+                        grid.neighbors.Add(new GridNeighbor(other,141));
                     }
                 }
             }

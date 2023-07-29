@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GT.Core
 {
     [Serializable]
     public class BattleMap
     {
+        public int Size;
         public List<BattleGrid> battleGrids = new List<BattleGrid>();
 
         // public List<Connection> gridConnections = new List<Connection>();
@@ -39,12 +41,12 @@ namespace GT.Core
                 for (int j = 0; j < battleGrids[u].neighbors.Count; j++)
                 {
                     var neigbor = battleGrids[u].neighbors[j];
-                    if (!visited[neigbor.end] && neigbor.weight != 0 && dist[u] != 0x3f3f3f3f &&
-                        dist[u] + neigbor.weight < dist[neigbor.end]
+                    if (!visited[neigbor.End] && neigbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
+                        dist[u] + neigbor.Weight < dist[neigbor.End]
                        )
                     {
-                        dist[neigbor.end] = dist[u] + neigbor.weight;
-                        prev[neigbor.end] = u;
+                        dist[neigbor.End] = dist[u] + neigbor.Weight;
+                        prev[neigbor.End] = u;
                     }
                 }
             }
@@ -86,12 +88,12 @@ namespace GT.Core
                 for (int j = 0; j < battleGrids[u].neighbors.Count; j++)
                 {
                     var neigbor = battleGrids[u].neighbors[j];
-                    if (!visited[neigbor.end] && neigbor.weight != 0 && dist[u] != 0x3f3f3f3f &&
-                        dist[u] + neigbor.weight < dist[neigbor.end]
+                    if (!visited[neigbor.End] && neigbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
+                        dist[u] + neigbor.Weight < dist[neigbor.End]
                        )
                     {
-                        dist[neigbor.end] = dist[u] + neigbor.weight;
-                        prev[neigbor.end] = u;
+                        dist[neigbor.End] = dist[u] + neigbor.Weight;
+                        prev[neigbor.End] = u;
                     }
                 }
             }
@@ -161,17 +163,18 @@ namespace GT.Core
             return new Vector3(x, 0, y);
         }
     }
-
-    [Serializable]
+    
     public class GridNeighbor
     {
-        public int end;
-        public int weight;
+        public BattleGrid BattleGrid;
+        public readonly int End;
+        public readonly int Weight;
 
-        public GridNeighbor(int e, int w)
+        public GridNeighbor(BattleGrid grid, int w)
         {
-            end = e;
-            weight = w;
+            BattleGrid = grid;
+            End = grid.idx;
+            Weight = w;
         }
     }
 }

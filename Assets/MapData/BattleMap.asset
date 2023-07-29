@@ -16,6 +16,7 @@ MonoBehaviour:
   minX: 0
   minY: 0
   battleMap:
+    Size: 15
     battleGrids:
     - idx: 0
       x: 0

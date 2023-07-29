@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2376078021077533618}
   - component: {fileID: 60903692368330480}
   m_Layer: 0
-  m_Name: LineTemplate
+  m_Name: FlowLineTemplate
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -95,7 +95,7 @@ LineRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 1, g: 1, b: 1, a: 0}
+      key0: {r: 1, g: 1, b: 1, a: 1}
       key1: {r: 1, g: 1, b: 1, a: 1}
       key2: {r: 0, g: 0, b: 0, a: 1}
       key3: {r: 0, g: 0, b: 0, a: 0}
@@ -112,8 +112,8 @@ LineRenderer:
       ctime6: 0
       ctime7: 0
       atime0: 0
-      atime1: 6554
-      atime2: 58982
+      atime1: 65535
+      atime2: 65535
       atime3: 65535
       atime4: 65535
       atime5: 0
@@ -122,11 +122,11 @@ LineRenderer:
       m_Mode: 0
       m_ColorSpace: 0
       m_NumColorKeys: 2
-      m_NumAlphaKeys: 4
-    numCornerVertices: 0
+      m_NumAlphaKeys: 2
+    numCornerVertices: 5
     numCapVertices: 0
     alignment: 1
-    textureMode: 3
+    textureMode: 2
     textureScale: {x: 1, y: 1}
     shadowBias: 0.5
     generateLightingData: 0

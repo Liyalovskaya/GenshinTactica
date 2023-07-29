@@ -34,6 +34,7 @@ namespace GT.DevTool
             // BuildConnection(map);
             battleMapObject.size = size;
             battleMapObject.battleMap = map;
+            map.Size = size;
             AssetDatabase.SaveAssets();
             Debug.Log("Map Generated.");
         }

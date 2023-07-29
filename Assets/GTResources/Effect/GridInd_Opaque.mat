@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: GridInd_Alpha
-  m_Shader: {fileID: 4800000, guid: b1823ab2608a8904bb784824821ba194, type: 3}
+  m_Name: GridInd_Opaque
+  m_Shader: {fileID: 4800000, guid: 676fff1cda0a76543a2ac57f1cdbb437, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -61,7 +61,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: f6630bcb3cec67a4dbd4b9fb2ae1d9f9, type: 3}
+        m_Texture: {fileID: 2800000, guid: 01f66ab297a7f74479548f859f7c2814, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -98,7 +98,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.25
+    - _Alpha: 0.5
     - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _Blend: 2

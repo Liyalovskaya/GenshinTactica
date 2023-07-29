@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: GridInd_Alpha
+  m_Name: GridInd_Outline
   m_Shader: {fileID: 4800000, guid: b1823ab2608a8904bb784824821ba194, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

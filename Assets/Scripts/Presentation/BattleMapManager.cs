@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace GT.Presentation
 {
-    public class BattleIndicatorManager : Singleton<BattleIndicatorManager>
+    public class BattleMapManager : Singleton<BattleMapManager>
     {
         [SerializeField] private Transform gridIndRoot;
         [SerializeField] private Indicator gridIndTemplate;
@@ -15,7 +15,9 @@ namespace GT.Presentation
         private readonly Dictionary<BattleGrid, Indicator> _gIndicators = new Dictionary<BattleGrid, Indicator>();
         private readonly Dictionary<Collider, Indicator> _cIndicators = new Dictionary<Collider, Indicator>();
 
-        public BattleRun BattleRun => BattleRunController.Instance.BattleRun;
+        public BattleRun BattleRun => BattleRunManager.Instance.BattleRun;
+        public BattleMap BattleMap => BattleRun.BattleMap;
+        public int Size => BattleMap.Size;
 
         public void Initialize(BattleMap map)
         {
@@ -58,14 +60,13 @@ namespace GT.Presentation
                         _selectedInd.OnSelected();
                     }
                 }
-
             }
         }
 
 
         private void Update()
         {
-            if (BattleRunController.Instance.moveMode)
+            if (BattleRunManager.Instance.moveMode)
             {
                 if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out var hit, 100))
                 {
@@ -76,7 +77,9 @@ namespace GT.Presentation
                         ShowPath(BattleRun.Actors[0].BattleGrid, path);
                         if (Input.GetMouseButtonDown(0))
                         {
-                            _ = BattleRunController.Instance.actor.MoveTo(path);
+                            _ = BattleRunManager.Instance.actor.MoveTo(path);
+                            BattleRunManager.Instance.actor.pathLine = _pathLine;
+                            HideIndicators();
                         }
                     }
                     else
@@ -105,23 +108,46 @@ namespace GT.Presentation
             }
         }
 
-        public void ShowInds(List<BattleGrid> grids)
+        public void ShowIndicators(List<BattleGrid> grids, bool outline = false)
         {
+            var matrix = new int[Size][];
+            for (int i = 0; i < Size; i++)
+            {
+                matrix[i] = new int[Size];
+            }
+
             foreach (var grid in grids)
             {
                 if (_gIndicators.TryGetValue(grid, out var ind))
                 {
                     ind.gameObject.SetActive(true);
+                    matrix[grid.x][grid.y] = -1;
                 }
             }
+            //
+            // if (outline)
+            // {
+            //     for (int i = 0; i < Size; i++)
+            //     {
+            //         for (int j = 0; j < Size; j++)
+            //         {
+            //             if (matrix[i][j] == -1) continue;
+            //             _gIndicators[BattleMap.GetGrid(i, j)]
+            //                 .SetOutline(BattleMapIndicatorHelper.GetGridBit(Size, matrix, i, j));
+            //         }
+            //     }
+            // }
         }
 
-        public void HideInds()
+        public void HideIndicators()
         {
             foreach (var ind in _gIndicators.Values)
             {
                 ind.gameObject.SetActive(false);
+                // ind.SetOutline(0);
             }
+
+            BattleRunManager.Instance.moveMode = false;
         }
     }
 }

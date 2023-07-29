@@ -1,19 +1,15 @@
 // Made with Amplify Shader Editor v1.9.1.8
 // Available at the Unity Asset Store - http://u3d.as/y3X 
-Shader "Line"
+Shader "OutlineArray"
 {
 	Properties
 	{
 		[HideInInspector] _AlphaCutoff("Alpha Cutoff ", Range(0, 1)) = 0.5
 		[HideInInspector] _EmissionColor("Emission Color", Color) = (1,1,1,1)
-		[ASEBegin][SingleLineTexture]_MainTex("MainTex", 2D) = "white" {}
-		_BaseColor("BaseColor", Color) = (0,0,0,0)
-		_Brightness("Brightness", Float) = 1
-		[SingleLineTexture]_FlowMap("FlowMap", 2D) = "white" {}
-		_FlowIntensity("FlowIntensity", Float) = 1
-		_FlowPow("FlowPow", Float) = 2
-		[ASEEnd]_FlowSpeed("FlowSpeed", Float) = 0
-		[HideInInspector] _texcoord( "", 2D ) = "white" {}
+		[ASEBegin][HDR]_BaseColor("BaseColor", Color) = (1,1,1,0)
+		[SingleLineTexture]_MainTex("MainTex", 2D) = "white" {}
+		_Alpha("Alpha", Range( 0 , 1)) = 1
+		[ASEEnd]_OutlineIndex("OutlineIndex", Int) = 0
 
 
 		//_TessPhongStrength( "Tess Phong Strength", Range( 0, 1 ) ) = 0.5
@@ -37,7 +33,7 @@ Shader "Line"
 
 		
 
-		Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent" "UniversalMaterialType"="Unlit" }
+		Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" "UniversalMaterialType"="Unlit" }
 
 		Cull Back
 		AlphaToMask Off
@@ -162,9 +158,9 @@ Shader "Line"
 			Name "Forward"
 			Tags { "LightMode"="UniversalForwardOnly" }
 
-			Blend One One, One OneMinusSrcAlpha
-			ZWrite Off
-			ZTest Always
+			Blend One Zero, One Zero
+			ZWrite On
+			ZTest LEqual
 			Offset 0 , 0
 			ColorMask RGBA
 
@@ -173,7 +169,7 @@ Shader "Line"
 			HLSLPROGRAM
 
 			#pragma multi_compile_instancing
-			#define _SURFACE_TYPE_TRANSPARENT 1
+			#define _ALPHATEST_ON 1
 			#define ASE_SRP_VERSION 140008
 
 
@@ -205,15 +201,13 @@ Shader "Line"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceData.hlsl"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
-			#define ASE_NEEDS_FRAG_COLOR
-
+			
 
 			struct VertexInput
 			{
 				float4 vertex : POSITION;
 				float3 ase_normal : NORMAL;
 				float4 ase_texcoord : TEXCOORD0;
-				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -230,18 +224,14 @@ Shader "Line"
 					float fogFactor : TEXCOORD2;
 				#endif
 				float4 ase_texcoord3 : TEXCOORD3;
-				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
 			CBUFFER_START(UnityPerMaterial)
-			float4 _MainTex_ST;
 			float4 _BaseColor;
-			float _FlowIntensity;
-			float _FlowSpeed;
-			float _FlowPow;
-			float _Brightness;
+			float _Alpha;
+			int _OutlineIndex;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -253,7 +243,6 @@ Shader "Line"
 			CBUFFER_END
 
 			sampler2D _MainTex;
-			sampler2D _FlowMap;
 
 
 			
@@ -265,7 +254,6 @@ Shader "Line"
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 				o.ase_texcoord3.xy = v.ase_texcoord.xy;
-				o.ase_color = v.ase_color;
 				
 				//setting value to unused interpolator channels and avoid initialization warnings
 				o.ase_texcoord3.zw = 0;
@@ -315,7 +303,6 @@ Shader "Line"
 				float4 vertex : INTERNALTESSPOS;
 				float3 ase_normal : NORMAL;
 				float4 ase_texcoord : TEXCOORD0;
-				float4 ase_color : COLOR;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -334,7 +321,6 @@ Shader "Line"
 				o.vertex = v.vertex;
 				o.ase_normal = v.ase_normal;
 				o.ase_texcoord = v.ase_texcoord;
-				o.ase_color = v.ase_color;
 				return o;
 			}
 
@@ -374,7 +360,6 @@ Shader "Line"
 				o.vertex = patch[0].vertex * bary.x + patch[1].vertex * bary.y + patch[2].vertex * bary.z;
 				o.ase_normal = patch[0].ase_normal * bary.x + patch[1].ase_normal * bary.y + patch[2].ase_normal * bary.z;
 				o.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
-				o.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -415,17 +400,42 @@ Shader "Line"
 					#endif
 				#endif
 
-				float2 uv_MainTex = IN.ase_texcoord3.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 tex2DNode13 = tex2D( _MainTex, uv_MainTex );
-				float mulTime15 = _TimeParameters.x * _FlowSpeed;
-				float2 appendResult18 = (float2(mulTime15 , 0.0));
-				float2 texCoord17 = IN.ase_texcoord3.xy * float2( 1,1 ) + appendResult18;
+				float2 texCoord17 = IN.ase_texcoord3.xy * float2( 1,1 ) + float2( 0,0 );
+				// *** BEGIN Flipbook UV Animation vars ***
+				// Total tiles of Flipbook Texture
+				float fbtotaltiles24 = 4.0 * 4.0;
+				// Offsets for cols and rows of Flipbook Texture
+				float fbcolsoffset24 = 1.0f / 4.0;
+				float fbrowsoffset24 = 1.0f / 4.0;
+				// Speed of animation
+				float fbspeed24 = _Time[ 1 ] * 0.0;
+				// UV Tiling (col and row offset)
+				float2 fbtiling24 = float2(fbcolsoffset24, fbrowsoffset24);
+				// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)
+				// Calculate current tile linear index
+				float fbcurrenttileindex24 = round( fmod( fbspeed24 + (float)_OutlineIndex, fbtotaltiles24) );
+				fbcurrenttileindex24 += ( fbcurrenttileindex24 < 0) ? fbtotaltiles24 : 0;
+				// Obtain Offset X coordinate from current tile linear index
+				float fblinearindextox24 = round ( fmod ( fbcurrenttileindex24, 4.0 ) );
+				// Multiply Offset X by coloffset
+				float fboffsetx24 = fblinearindextox24 * fbcolsoffset24;
+				// Obtain Offset Y coordinate from current tile linear index
+				float fblinearindextoy24 = round( fmod( ( fbcurrenttileindex24 - fblinearindextox24 ) / 4.0, 4.0 ) );
+				// Reverse Y to get tiles from Top to Bottom
+				fblinearindextoy24 = (int)(4.0-1) - fblinearindextoy24;
+				// Multiply Offset Y by rowoffset
+				float fboffsety24 = fblinearindextoy24 * fbrowsoffset24;
+				// UV Offset
+				float2 fboffset24 = float2(fboffsetx24, fboffsety24);
+				// Flipbook UV
+				half2 fbuv24 = texCoord17 * fbtiling24 + fboffset24;
+				// *** END Flipbook UV Animation vars ***
 				
 				float3 BakedAlbedo = 0;
 				float3 BakedEmission = 0;
-				float3 Color = ( tex2DNode13 * IN.ase_color * _BaseColor * IN.ase_color.a * ( _FlowIntensity * saturate( pow( tex2D( _FlowMap, texCoord17 ).r , _FlowPow ) ) ) * _Brightness ).rgb;
-				float Alpha = tex2DNode13.r;
-				float AlphaClipThreshold = 0.5;
+				float3 Color = ( _BaseColor * _Alpha ).rgb;
+				float Alpha = tex2D( _MainTex, fbuv24 ).r;
+				float AlphaClipThreshold = 0.1;
 				float AlphaClipThresholdShadow = 0.5;
 
 				#ifdef _ALPHATEST_ON
@@ -473,7 +483,7 @@ Shader "Line"
 			HLSLPROGRAM
 
 			#pragma multi_compile_instancing
-			#define _SURFACE_TYPE_TRANSPARENT 1
+			#define _ALPHATEST_ON 1
 			#define ASE_SRP_VERSION 140008
 
 
@@ -515,12 +525,9 @@ Shader "Line"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
-			float4 _MainTex_ST;
 			float4 _BaseColor;
-			float _FlowIntensity;
-			float _FlowSpeed;
-			float _FlowPow;
-			float _Brightness;
+			float _Alpha;
+			int _OutlineIndex;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -699,12 +706,40 @@ Shader "Line"
 					#endif
 				#endif
 
-				float2 uv_MainTex = IN.ase_texcoord2.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 tex2DNode13 = tex2D( _MainTex, uv_MainTex );
+				float2 texCoord17 = IN.ase_texcoord2.xy * float2( 1,1 ) + float2( 0,0 );
+				// *** BEGIN Flipbook UV Animation vars ***
+				// Total tiles of Flipbook Texture
+				float fbtotaltiles24 = 4.0 * 4.0;
+				// Offsets for cols and rows of Flipbook Texture
+				float fbcolsoffset24 = 1.0f / 4.0;
+				float fbrowsoffset24 = 1.0f / 4.0;
+				// Speed of animation
+				float fbspeed24 = _Time[ 1 ] * 0.0;
+				// UV Tiling (col and row offset)
+				float2 fbtiling24 = float2(fbcolsoffset24, fbrowsoffset24);
+				// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)
+				// Calculate current tile linear index
+				float fbcurrenttileindex24 = round( fmod( fbspeed24 + (float)_OutlineIndex, fbtotaltiles24) );
+				fbcurrenttileindex24 += ( fbcurrenttileindex24 < 0) ? fbtotaltiles24 : 0;
+				// Obtain Offset X coordinate from current tile linear index
+				float fblinearindextox24 = round ( fmod ( fbcurrenttileindex24, 4.0 ) );
+				// Multiply Offset X by coloffset
+				float fboffsetx24 = fblinearindextox24 * fbcolsoffset24;
+				// Obtain Offset Y coordinate from current tile linear index
+				float fblinearindextoy24 = round( fmod( ( fbcurrenttileindex24 - fblinearindextox24 ) / 4.0, 4.0 ) );
+				// Reverse Y to get tiles from Top to Bottom
+				fblinearindextoy24 = (int)(4.0-1) - fblinearindextoy24;
+				// Multiply Offset Y by rowoffset
+				float fboffsety24 = fblinearindextoy24 * fbrowsoffset24;
+				// UV Offset
+				float2 fboffset24 = float2(fboffsetx24, fboffsety24);
+				// Flipbook UV
+				half2 fbuv24 = texCoord17 * fbtiling24 + fboffset24;
+				// *** END Flipbook UV Animation vars ***
 				
 
-				float Alpha = tex2DNode13.r;
-				float AlphaClipThreshold = 0.5;
+				float Alpha = tex2D( _MainTex, fbuv24 ).r;
+				float AlphaClipThreshold = 0.1;
 				float AlphaClipThresholdShadow = 0.5;
 
 				#ifdef _ALPHATEST_ON
@@ -737,7 +772,7 @@ Shader "Line"
 			HLSLPROGRAM
 
 			#pragma multi_compile_instancing
-			#define _SURFACE_TYPE_TRANSPARENT 1
+			#define _ALPHATEST_ON 1
 			#define ASE_SRP_VERSION 140008
 
 
@@ -775,12 +810,9 @@ Shader "Line"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
-			float4 _MainTex_ST;
 			float4 _BaseColor;
-			float _FlowIntensity;
-			float _FlowSpeed;
-			float _FlowPow;
-			float _Brightness;
+			float _Alpha;
+			int _OutlineIndex;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -939,12 +971,40 @@ Shader "Line"
 					#endif
 				#endif
 
-				float2 uv_MainTex = IN.ase_texcoord2.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 tex2DNode13 = tex2D( _MainTex, uv_MainTex );
+				float2 texCoord17 = IN.ase_texcoord2.xy * float2( 1,1 ) + float2( 0,0 );
+				// *** BEGIN Flipbook UV Animation vars ***
+				// Total tiles of Flipbook Texture
+				float fbtotaltiles24 = 4.0 * 4.0;
+				// Offsets for cols and rows of Flipbook Texture
+				float fbcolsoffset24 = 1.0f / 4.0;
+				float fbrowsoffset24 = 1.0f / 4.0;
+				// Speed of animation
+				float fbspeed24 = _Time[ 1 ] * 0.0;
+				// UV Tiling (col and row offset)
+				float2 fbtiling24 = float2(fbcolsoffset24, fbrowsoffset24);
+				// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)
+				// Calculate current tile linear index
+				float fbcurrenttileindex24 = round( fmod( fbspeed24 + (float)_OutlineIndex, fbtotaltiles24) );
+				fbcurrenttileindex24 += ( fbcurrenttileindex24 < 0) ? fbtotaltiles24 : 0;
+				// Obtain Offset X coordinate from current tile linear index
+				float fblinearindextox24 = round ( fmod ( fbcurrenttileindex24, 4.0 ) );
+				// Multiply Offset X by coloffset
+				float fboffsetx24 = fblinearindextox24 * fbcolsoffset24;
+				// Obtain Offset Y coordinate from current tile linear index
+				float fblinearindextoy24 = round( fmod( ( fbcurrenttileindex24 - fblinearindextox24 ) / 4.0, 4.0 ) );
+				// Reverse Y to get tiles from Top to Bottom
+				fblinearindextoy24 = (int)(4.0-1) - fblinearindextoy24;
+				// Multiply Offset Y by rowoffset
+				float fboffsety24 = fblinearindextoy24 * fbrowsoffset24;
+				// UV Offset
+				float2 fboffset24 = float2(fboffsetx24, fboffsety24);
+				// Flipbook UV
+				half2 fbuv24 = texCoord17 * fbtiling24 + fboffset24;
+				// *** END Flipbook UV Animation vars ***
 				
 
-				float Alpha = tex2DNode13.r;
-				float AlphaClipThreshold = 0.5;
+				float Alpha = tex2D( _MainTex, fbuv24 ).r;
+				float AlphaClipThreshold = 0.1;
 
 				#ifdef _ALPHATEST_ON
 					clip(Alpha - AlphaClipThreshold);
@@ -970,7 +1030,7 @@ Shader "Line"
 			HLSLPROGRAM
 
 			#pragma multi_compile_instancing
-			#define _SURFACE_TYPE_TRANSPARENT 1
+			#define _ALPHATEST_ON 1
 			#define ASE_SRP_VERSION 140008
 
 
@@ -1008,12 +1068,9 @@ Shader "Line"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
-			float4 _MainTex_ST;
 			float4 _BaseColor;
-			float _FlowIntensity;
-			float _FlowSpeed;
-			float _FlowPow;
-			float _Brightness;
+			float _Alpha;
+			int _OutlineIndex;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -1157,12 +1214,40 @@ Shader "Line"
 			{
 				SurfaceDescription surfaceDescription = (SurfaceDescription)0;
 
-				float2 uv_MainTex = IN.ase_texcoord.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 tex2DNode13 = tex2D( _MainTex, uv_MainTex );
+				float2 texCoord17 = IN.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
+				// *** BEGIN Flipbook UV Animation vars ***
+				// Total tiles of Flipbook Texture
+				float fbtotaltiles24 = 4.0 * 4.0;
+				// Offsets for cols and rows of Flipbook Texture
+				float fbcolsoffset24 = 1.0f / 4.0;
+				float fbrowsoffset24 = 1.0f / 4.0;
+				// Speed of animation
+				float fbspeed24 = _Time[ 1 ] * 0.0;
+				// UV Tiling (col and row offset)
+				float2 fbtiling24 = float2(fbcolsoffset24, fbrowsoffset24);
+				// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)
+				// Calculate current tile linear index
+				float fbcurrenttileindex24 = round( fmod( fbspeed24 + (float)_OutlineIndex, fbtotaltiles24) );
+				fbcurrenttileindex24 += ( fbcurrenttileindex24 < 0) ? fbtotaltiles24 : 0;
+				// Obtain Offset X coordinate from current tile linear index
+				float fblinearindextox24 = round ( fmod ( fbcurrenttileindex24, 4.0 ) );
+				// Multiply Offset X by coloffset
+				float fboffsetx24 = fblinearindextox24 * fbcolsoffset24;
+				// Obtain Offset Y coordinate from current tile linear index
+				float fblinearindextoy24 = round( fmod( ( fbcurrenttileindex24 - fblinearindextox24 ) / 4.0, 4.0 ) );
+				// Reverse Y to get tiles from Top to Bottom
+				fblinearindextoy24 = (int)(4.0-1) - fblinearindextoy24;
+				// Multiply Offset Y by rowoffset
+				float fboffsety24 = fblinearindextoy24 * fbrowsoffset24;
+				// UV Offset
+				float2 fboffset24 = float2(fboffsetx24, fboffsety24);
+				// Flipbook UV
+				half2 fbuv24 = texCoord17 * fbtiling24 + fboffset24;
+				// *** END Flipbook UV Animation vars ***
 				
 
-				surfaceDescription.Alpha = tex2DNode13.r;
-				surfaceDescription.AlphaClipThreshold = 0.5;
+				surfaceDescription.Alpha = tex2D( _MainTex, fbuv24 ).r;
+				surfaceDescription.AlphaClipThreshold = 0.1;
 
 				#if _ALPHATEST_ON
 					float alphaClipThreshold = 0.01f;
@@ -1188,7 +1273,7 @@ Shader "Line"
 			HLSLPROGRAM
 
 			#pragma multi_compile_instancing
-			#define _SURFACE_TYPE_TRANSPARENT 1
+			#define _ALPHATEST_ON 1
 			#define ASE_SRP_VERSION 140008
 
 
@@ -1226,12 +1311,9 @@ Shader "Line"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
-			float4 _MainTex_ST;
 			float4 _BaseColor;
-			float _FlowIntensity;
-			float _FlowSpeed;
-			float _FlowPow;
-			float _Brightness;
+			float _Alpha;
+			int _OutlineIndex;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -1370,12 +1452,40 @@ Shader "Line"
 			{
 				SurfaceDescription surfaceDescription = (SurfaceDescription)0;
 
-				float2 uv_MainTex = IN.ase_texcoord.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 tex2DNode13 = tex2D( _MainTex, uv_MainTex );
+				float2 texCoord17 = IN.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
+				// *** BEGIN Flipbook UV Animation vars ***
+				// Total tiles of Flipbook Texture
+				float fbtotaltiles24 = 4.0 * 4.0;
+				// Offsets for cols and rows of Flipbook Texture
+				float fbcolsoffset24 = 1.0f / 4.0;
+				float fbrowsoffset24 = 1.0f / 4.0;
+				// Speed of animation
+				float fbspeed24 = _Time[ 1 ] * 0.0;
+				// UV Tiling (col and row offset)
+				float2 fbtiling24 = float2(fbcolsoffset24, fbrowsoffset24);
+				// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)
+				// Calculate current tile linear index
+				float fbcurrenttileindex24 = round( fmod( fbspeed24 + (float)_OutlineIndex, fbtotaltiles24) );
+				fbcurrenttileindex24 += ( fbcurrenttileindex24 < 0) ? fbtotaltiles24 : 0;
+				// Obtain Offset X coordinate from current tile linear index
+				float fblinearindextox24 = round ( fmod ( fbcurrenttileindex24, 4.0 ) );
+				// Multiply Offset X by coloffset
+				float fboffsetx24 = fblinearindextox24 * fbcolsoffset24;
+				// Obtain Offset Y coordinate from current tile linear index
+				float fblinearindextoy24 = round( fmod( ( fbcurrenttileindex24 - fblinearindextox24 ) / 4.0, 4.0 ) );
+				// Reverse Y to get tiles from Top to Bottom
+				fblinearindextoy24 = (int)(4.0-1) - fblinearindextoy24;
+				// Multiply Offset Y by rowoffset
+				float fboffsety24 = fblinearindextoy24 * fbrowsoffset24;
+				// UV Offset
+				float2 fboffset24 = float2(fboffsetx24, fboffsety24);
+				// Flipbook UV
+				half2 fbuv24 = texCoord17 * fbtiling24 + fboffset24;
+				// *** END Flipbook UV Animation vars ***
 				
 
-				surfaceDescription.Alpha = tex2DNode13.r;
-				surfaceDescription.AlphaClipThreshold = 0.5;
+				surfaceDescription.Alpha = tex2D( _MainTex, fbuv24 ).r;
+				surfaceDescription.AlphaClipThreshold = 0.1;
 
 				#if _ALPHATEST_ON
 					float alphaClipThreshold = 0.01f;
@@ -1408,7 +1518,7 @@ Shader "Line"
 			HLSLPROGRAM
 
 			#pragma multi_compile_instancing
-			#define _SURFACE_TYPE_TRANSPARENT 1
+			#define _ALPHATEST_ON 1
 			#define ASE_SRP_VERSION 140008
 
 
@@ -1453,12 +1563,9 @@ Shader "Line"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
-			float4 _MainTex_ST;
 			float4 _BaseColor;
-			float _FlowIntensity;
-			float _FlowSpeed;
-			float _FlowPow;
-			float _Brightness;
+			float _Alpha;
+			int _OutlineIndex;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -1606,12 +1713,40 @@ Shader "Line"
 			{
 				SurfaceDescription surfaceDescription = (SurfaceDescription)0;
 
-				float2 uv_MainTex = IN.ase_texcoord1.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 tex2DNode13 = tex2D( _MainTex, uv_MainTex );
+				float2 texCoord17 = IN.ase_texcoord1.xy * float2( 1,1 ) + float2( 0,0 );
+				// *** BEGIN Flipbook UV Animation vars ***
+				// Total tiles of Flipbook Texture
+				float fbtotaltiles24 = 4.0 * 4.0;
+				// Offsets for cols and rows of Flipbook Texture
+				float fbcolsoffset24 = 1.0f / 4.0;
+				float fbrowsoffset24 = 1.0f / 4.0;
+				// Speed of animation
+				float fbspeed24 = _Time[ 1 ] * 0.0;
+				// UV Tiling (col and row offset)
+				float2 fbtiling24 = float2(fbcolsoffset24, fbrowsoffset24);
+				// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)
+				// Calculate current tile linear index
+				float fbcurrenttileindex24 = round( fmod( fbspeed24 + (float)_OutlineIndex, fbtotaltiles24) );
+				fbcurrenttileindex24 += ( fbcurrenttileindex24 < 0) ? fbtotaltiles24 : 0;
+				// Obtain Offset X coordinate from current tile linear index
+				float fblinearindextox24 = round ( fmod ( fbcurrenttileindex24, 4.0 ) );
+				// Multiply Offset X by coloffset
+				float fboffsetx24 = fblinearindextox24 * fbcolsoffset24;
+				// Obtain Offset Y coordinate from current tile linear index
+				float fblinearindextoy24 = round( fmod( ( fbcurrenttileindex24 - fblinearindextox24 ) / 4.0, 4.0 ) );
+				// Reverse Y to get tiles from Top to Bottom
+				fblinearindextoy24 = (int)(4.0-1) - fblinearindextoy24;
+				// Multiply Offset Y by rowoffset
+				float fboffsety24 = fblinearindextoy24 * fbrowsoffset24;
+				// UV Offset
+				float2 fboffset24 = float2(fboffsetx24, fboffsety24);
+				// Flipbook UV
+				half2 fbuv24 = texCoord17 * fbtiling24 + fboffset24;
+				// *** END Flipbook UV Animation vars ***
 				
 
-				surfaceDescription.Alpha = tex2DNode13.r;
-				surfaceDescription.AlphaClipThreshold = 0.5;
+				surfaceDescription.Alpha = tex2D( _MainTex, fbuv24 ).r;
+				surfaceDescription.AlphaClipThreshold = 0.1;
 
 				#if _ALPHATEST_ON
 					clip(surfaceDescription.Alpha - surfaceDescription.AlphaClipThreshold);
@@ -1651,47 +1786,44 @@ Shader "Line"
 }
 /*ASEBEGIN
 Version=19108
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;0;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ExtraPrePass;0;0;ExtraPrePass;5;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;0;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;2;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ShadowCaster;0;2;ShadowCaster;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=ShadowCaster;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;3;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthOnly;0;3;DepthOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;False;False;True;1;LightMode=DepthOnly;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;4;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;Meta;0;4;Meta;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Meta;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;5;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;Universal2D;0;5;Universal2D;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=Universal2D;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;6;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;SceneSelectionPass;0;6;SceneSelectionPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=SceneSelectionPass;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;7;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ScenePickingPass;0;7;ScenePickingPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Picking;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;8;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormals;0;8;DepthNormals;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;9;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormalsOnly;0;9;DepthNormalsOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;True;9;d3d11;metal;vulkan;xboxone;xboxseries;playstation;ps4;ps5;switch;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;11;-466,-93.5;Inherit;False;6;6;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;2;COLOR;0,0,0,0;False;3;FLOAT;0;False;4;FLOAT;0;False;5;FLOAT;0;False;1;COLOR;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;1;13,4;Float;False;True;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;Line;2992e84f91cbeb14eab234972e07ea9d;True;Forward;0;1;Forward;8;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Transparent=RenderType;Queue=Transparent=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;1;False;;1;1;False;;10;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;True;True;False;1;False;;255;False;;255;False;;2;False;;3;False;;2;False;;3;False;;0;False;;0;False;;0;False;;0;False;;True;True;2;False;;True;7;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForwardOnly;False;False;0;;0;0;Standard;23;Surface;1;638261327635288225;  Blend;2;638261548384062936;Two Sided;1;0;Forward Only;0;0;Cast Shadows;1;0;  Use Shadow Threshold;0;0;Receive Shadows;1;0;GPU Instancing;1;0;LOD CrossFade;0;0;Built-in Fog;0;0;DOTS Instancing;0;0;Meta Pass;0;0;Extra Pre Pass;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Vertex Position,InvertActionOnDeselection;1;0;0;10;False;True;True;True;False;False;True;True;True;False;False;;False;0
-Node;AmplifyShaderEditor.TextureCoordinatesNode;17;-1942.395,-22.07544;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.DynamicAppendNode;18;-2116.395,55.92456;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RangedFloatNode;16;-2503.395,171.9246;Inherit;False;Property;_FlowSpeed;FlowSpeed;6;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleTimeNode;15;-2319.395,171.9246;Inherit;False;1;0;FLOAT;1;False;1;FLOAT;0
-Node;AmplifyShaderEditor.PowerNode;24;-1419.624,123.9355;Inherit;False;False;2;0;FLOAT;0;False;1;FLOAT;1;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SamplerNode;19;-1707.395,-50.07544;Inherit;True;Property;_FlowMap;FlowMap;3;1;[SingleLineTexture];Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.SaturateNode;26;-1267.624,171.9355;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;23;-1636.624,235.9355;Inherit;False;Property;_FlowPow;FlowPow;5;0;Create;True;0;0;0;False;0;False;2;2;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.SamplerNode;13;-954,-483.5;Inherit;True;Property;_MainTex;MainTex;0;1;[SingleLineTexture];Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.VertexColorNode;10;-794,93.5;Inherit;False;0;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;25;-1087.624,-77.06451;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;22;-1350.624,-175.0645;Inherit;False;Property;_FlowIntensity;FlowIntensity;4;0;Create;True;0;0;0;False;0;False;1;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.ColorNode;14;-922,-267.5;Inherit;False;Property;_BaseColor;BaseColor;1;0;Create;True;0;0;0;False;0;False;0,0,0,0;1,1,1,0;True;0;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.RangedFloatNode;27;-870.6243,-89.06451;Inherit;False;Property;_Brightness;Brightness;2;0;Create;True;0;0;0;False;0;False;1;1;0;0;0;1;FLOAT;0
-WireConnection;11;0;13;0
-WireConnection;11;1;10;0
-WireConnection;11;2;14;0
-WireConnection;11;3;10;4
-WireConnection;11;4;25;0
-WireConnection;11;5;27;0
-WireConnection;1;2;11;0
-WireConnection;1;3;13;1
-WireConnection;17;1;18;0
-WireConnection;18;0;15;0
-WireConnection;15;0;16;0
-WireConnection;24;0;19;1
-WireConnection;24;1;23;0
-WireConnection;19;1;17;0
-WireConnection;26;0;24;0
-WireConnection;25;0;22;0
-WireConnection;25;1;26;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;0;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ExtraPrePass;0;0;ExtraPrePass;5;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;0;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;1;0,0;Float;False;True;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;OutlineArray;2992e84f91cbeb14eab234972e07ea9d;True;Forward;0;1;Forward;8;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForwardOnly;False;False;0;;0;0;Standard;23;Surface;0;0;  Blend;0;0;Two Sided;1;0;Forward Only;0;0;Cast Shadows;1;0;  Use Shadow Threshold;0;0;Receive Shadows;1;0;GPU Instancing;1;0;LOD CrossFade;0;0;Built-in Fog;0;0;DOTS Instancing;0;0;Meta Pass;0;0;Extra Pre Pass;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Vertex Position,InvertActionOnDeselection;1;0;0;10;False;True;True;True;False;False;True;True;True;False;False;;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;2;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ShadowCaster;0;2;ShadowCaster;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=ShadowCaster;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;3;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthOnly;0;3;DepthOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;False;False;True;1;LightMode=DepthOnly;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;4;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;Meta;0;4;Meta;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Meta;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;5;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;Universal2D;0;5;Universal2D;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=Universal2D;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;6;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;SceneSelectionPass;0;6;SceneSelectionPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=SceneSelectionPass;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;7;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ScenePickingPass;0;7;ScenePickingPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Picking;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;8;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormals;0;8;DepthNormals;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;9;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormalsOnly;0;9;DepthNormalsOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;True;9;d3d11;metal;vulkan;xboxone;xboxseries;playstation;ps4;ps5;switch;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.RangedFloatNode;10;-799.8333,204.9167;Inherit;False;Property;_Alpha;Alpha;2;0;Create;True;0;0;0;False;0;False;1;0.25;0;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;13;-437.8333,-14.58333;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;FLOAT;0;False;1;COLOR;0
+Node;AmplifyShaderEditor.ColorNode;12;-747.8333,-54.58333;Inherit;False;Property;_BaseColor;BaseColor;0;1;[HDR];Create;True;0;0;0;False;0;False;1,1,1,0;8.800361,8.800361,8.800361,1;True;0;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleRemainderNode;19;-1678,-84;Inherit;False;2;0;INT;0;False;1;INT;4;False;1;INT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;21;-1449,-368;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleDivideOpNode;18;-1639,-346;Inherit;False;2;0;INT;0;False;1;INT;4;False;1;INT;0
+Node;AmplifyShaderEditor.SamplerNode;11;-651.8333,-467.5833;Inherit;True;Property;_MainTex;MainTex;1;1;[SingleLineTexture];Create;True;0;0;0;False;0;False;-1;None;f6630bcb3cec67a4dbd4b9fb2ae1d9f9;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;23;-1923,-456;Inherit;False;2;0;INT;15;False;1;INT;0;False;1;INT;0
+Node;AmplifyShaderEditor.IntNode;16;-2173,-361;Inherit;False;Property;_OutlineIndex;OutlineIndex;3;0;Create;True;0;0;0;False;0;False;0;0;False;0;1;INT;0
+Node;AmplifyShaderEditor.RangedFloatNode;20;-1475,-527;Inherit;False;Constant;_Float1;Float 1;4;0;Create;True;0;0;0;False;0;False;0.25;0;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;22;-1280,-373;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.RangedFloatNode;15;-349.3333,115.6667;Inherit;False;Constant;_Float0;Float 0;3;0;Create;True;0;0;0;False;0;False;0.1;0;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.TFHCFlipBookUVAnimation;24;-1086,-584;Inherit;False;0;0;6;0;FLOAT2;0,0;False;1;FLOAT;4;False;2;FLOAT;4;False;3;FLOAT;0;False;4;FLOAT;0;False;5;FLOAT;0;False;3;FLOAT2;0;FLOAT;1;FLOAT;2
+Node;AmplifyShaderEditor.TextureCoordinatesNode;17;-1432,-746;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+WireConnection;1;2;13;0
+WireConnection;1;3;11;1
+WireConnection;1;4;15;0
+WireConnection;13;0;12;0
+WireConnection;13;1;10;0
+WireConnection;19;0;23;0
+WireConnection;21;0;18;0
+WireConnection;21;1;19;0
+WireConnection;18;0;23;0
+WireConnection;11;1;24;0
+WireConnection;23;1;16;0
+WireConnection;22;0;20;0
+WireConnection;22;1;21;0
+WireConnection;24;0;17;0
+WireConnection;24;4;16;0
 ASEEND*/
-//CHKSM=21A0BF97EDF561A1B3CAB16CF76B98FA783296E1
+//CHKSM=8EF5731E27DC9432FB047D429D22DB6FBB7F8DCA
