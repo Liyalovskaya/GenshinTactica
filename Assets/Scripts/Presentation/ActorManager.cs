@@ -113,11 +113,11 @@ namespace GT.Presentation
                 await UniTask.WaitUntil(() => _agent.remainingDistance < endLength);
                 _animator.ResetTrigger("Idle");
                 _animator.SetTrigger("Idle");
-                Actor.BattleGrid = _path[^1];
-                _targetInd.ReachTarget();
                 var t = 2 * endLength / runningSpeed;
                 DOVirtual.Float(runningSpeed, 0f, t, x => _agent.speed = x).SetEase(Ease.Linear);
                 await UniTask.WaitForSeconds(t);
+                Actor.BattleGrid = _path[^1];
+                _targetInd.ReachTarget();
                 _agent.ResetPath();
 
                 // await UniTask.WaitUntil(() => _agent.remainingDistance < 0.01f);

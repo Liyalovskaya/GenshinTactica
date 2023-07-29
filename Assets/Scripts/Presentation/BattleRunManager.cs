@@ -35,7 +35,7 @@ namespace GT.Presentation
             if (Input.GetKeyDown(KeyCode.A))
             {
                 BattleMapManager.Instance.ShowIndicators(
-                    BattleRun.BattleMap.GridsInRange(BattleRun.CurrentActor.BattleGrid, BattleRun.CurrentActor.MoveRange));
+                    BattleRun.BattleMap.GridsInRange(BattleRun.CurrentActor.BattleGrid, BattleRun.CurrentActor.MoveAbility));
                 BattleMapManager.Instance.MoveMode = true;
             }
 

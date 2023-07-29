@@ -29,7 +29,7 @@ namespace GT.Core
                 }
             }
         }
-        public int MoveRange = 5;
+        public float MoveAbility = 4f;
         public ActorType Type;
 
         public Actor(string name, BattleGrid grid)

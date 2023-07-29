@@ -56,7 +56,7 @@ namespace GT.Core
 
             for (int i = 0; i < num; i++)
             {
-                if (i != start.idx && dist[i] / 100f < range)
+                if (i != start.idx && dist[i] / 100f <= range)
                 {
                     result.Add(battleGrids[i]);
                 }
@@ -87,13 +87,13 @@ namespace GT.Core
                 visited[u] = true;
                 for (int j = 0; j < battleGrids[u].Neighbors.Count; j++)
                 {
-                    var neigbor = battleGrids[u].Neighbors[j];
-                    if (!visited[neigbor.End] && neigbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
-                        dist[u] + neigbor.Weight < dist[neigbor.End]
+                    var neighbor = battleGrids[u].Neighbors[j];
+                    if (!visited[neighbor.End] && neighbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
+                        dist[u] + neighbor.Weight < dist[neighbor.End] && neighbor.BattleGrid.GridState == GridState.Empty 
                        )
                     {
-                        dist[neigbor.End] = dist[u] + neigbor.Weight;
-                        prev[neigbor.End] = u;
+                        dist[neighbor.End] = dist[u] + neighbor.Weight;
+                        prev[neighbor.End] = u;
                     }
                 }
             }
