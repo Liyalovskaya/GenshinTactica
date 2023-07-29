@@ -10,7 +10,6 @@ namespace GT.Presentation
         [SerializeField] private BattleMapObject battleMapObject;
 
         public BattleRun BattleRun;
-        public bool moveMode = false;
 
         public static bool InputLock = false;
 
@@ -33,13 +32,13 @@ namespace GT.Presentation
             {
                 BattleMapManager.Instance.ShowIndicators(
                     BattleRun.BattleMap.GridsInRange(BattleRun.CurrentActor.BattleGrid, BattleRun.CurrentActor.MoveRange));
-                moveMode = true;
+                BattleMapManager.Instance.MoveMode = true;
             }
 
             if (Input.GetKeyDown(KeyCode.S))
             {
                 BattleMapManager.Instance.HideIndicators();
-                moveMode = false;
+                BattleMapManager.Instance.MoveMode = false;
             }
         }
 

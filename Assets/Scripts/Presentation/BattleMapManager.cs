@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using DG.Tweening;
 using GT.Core;
 using UnityEngine;
 
@@ -11,6 +13,30 @@ namespace GT.Presentation
         [SerializeField] private Transform gridIndRoot;
         [SerializeField] private Indicator gridIndTemplate;
         [SerializeField] private LineRenderer lineTemplate;
+        [SerializeField] private MeshRenderer gridBackground;
+
+        private Tween _backgroundTween;
+
+        private bool _moveMode;
+        public bool MoveMode
+        {
+            get => _moveMode;
+            set
+            {
+                _moveMode = value;
+                if (_moveMode)
+                {
+                    _backgroundTween?.Kill();
+                    _backgroundTween = gridBackground.material.DOFloat(.5f, "_Alpha", .2f).SetEase(Ease.OutCubic);
+                }
+                else
+                {
+                    _backgroundTween?.Kill();
+                    _backgroundTween = gridBackground.material.DOFloat(.25f, "_Alpha", .2f).SetEase(Ease.OutCubic);
+                }
+
+            }
+        }
 
         private readonly Dictionary<BattleGrid, Indicator> _gIndicators = new Dictionary<BattleGrid, Indicator>();
         private readonly Dictionary<Collider, Indicator> _cIndicators = new Dictionary<Collider, Indicator>();
@@ -30,6 +56,7 @@ namespace GT.Presentation
                 _gIndicators.Add(grid, ind);
                 _cIndicators.Add(ind.GetComponentInChildren<Collider>(), ind);
             }
+
             _pathLine = Instantiate(lineTemplate, gridIndRoot);
         }
 
@@ -66,7 +93,7 @@ namespace GT.Presentation
 
         private void Update()
         {
-            if (BattleRunManager.Instance.moveMode)
+            if (MoveMode)
             {
                 if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out var hit, 100))
                 {
@@ -77,13 +104,15 @@ namespace GT.Presentation
                         ShowPath(BattleRun.Actors[0].BattleGrid, path);
                         if (Input.GetMouseButtonDown(0))
                         {
-                            _ = BattleRunManager.Instance.actor.MoveTo(path);
-                            BattleRunManager.Instance.actor.pathLine = _pathLine;
+                            var actor = BattleRunManager.Instance.actor;
+                            _ = actor.MoveTo(path);
+                            actor.SetPath(_pathLine, target);
                             HideIndicators();
                         }
                     }
                     else
                     {
+                        SelectedInd = null;
                         _pathLine.enabled = false;
                     }
                 }
@@ -91,6 +120,7 @@ namespace GT.Presentation
         }
 
         private LineRenderer _pathLine;
+
         public void ShowPath(BattleGrid start, List<BattleGrid> grids)
         {
             _pathLine.enabled = true;
@@ -141,13 +171,12 @@ namespace GT.Presentation
 
         public void HideIndicators()
         {
-            foreach (var ind in _gIndicators.Values)
+            foreach (var ind in _gIndicators.Values.Where(ind => !ind.setTarget))
             {
                 ind.gameObject.SetActive(false);
-                // ind.SetOutline(0);
             }
 
-            BattleRunManager.Instance.moveMode = false;
+            MoveMode = false;
         }
     }
 }

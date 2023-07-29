@@ -42,15 +42,26 @@ namespace GT.Presentation
         private List<BattleGrid> _path = new List<BattleGrid>();
         private int _pathIdx;
 
-        public LineRenderer pathLine;
+        private LineRenderer _pathLine;
+        private Indicator _targetInd;
         private bool _running;
 
         private void Update()
         {
-            if (_running && pathLine != null)
+            if (_running && _pathLine != null)
             {
-                pathLine.SetPosition(0, transform.position + new Vector3(0, .06f, 0));
+                _pathLine.SetPosition(0, transform.position + new Vector3(0, .06f, 0));
             }
+        }
+
+        public void SetPath(LineRenderer line, Indicator targetInd)
+        {
+            _pathLine = line;
+            _targetInd = targetInd;
+            _targetInd.SetTarget();
+
+
+
         }
 
         public async Task MoveTo(List<BattleGrid> queue)
@@ -70,12 +81,7 @@ namespace GT.Presentation
                 await MoveToGrid(_path[i]);
             }
 
-            Actor.MoveTo(_path[^1]);
-            _path = null;
-            _running = false;
-            pathLine.enabled = false;
-            pathLine = null;
-            BattleRunManager.InputLock = false;
+            ReachEnd(_path[^1]);
         }
 
         private async Task Turning(Vector3 target)
@@ -93,11 +99,11 @@ namespace GT.Presentation
             if (_pathIdx != _path.Count - 1)
             {
                 await UniTask.WaitUntil(() => _agent.remainingDistance < turningRadius);
-                if (pathLine != null)
+                if (_pathLine != null)
                 {
-                    var tmp = new Vector3[pathLine.positionCount];
-                    pathLine.GetPositions(tmp);
-                    pathLine.SetPositions(tmp.Skip(1).ToArray());
+                    var tmp = new Vector3[_pathLine.positionCount];
+                    _pathLine.GetPositions(tmp);
+                    _pathLine.SetPositions(tmp.Skip(1).ToArray());
                 }
                 _pathIdx++;
             }
@@ -108,11 +114,22 @@ namespace GT.Presentation
                 _animator.SetTrigger("Idle");
                 var t = 2 * endLength / runningSpeed;
                 DOVirtual.Float(runningSpeed, 0f, t, x => _agent.speed = x).SetEase(Ease.Linear);
+                _ = _targetInd.ReachTarget();
                 await UniTask.WaitForSeconds(t);
                 _agent.ResetPath();
 
                 // await UniTask.WaitUntil(() => _agent.remainingDistance < 0.01f);
             }
+        }
+
+        private void ReachEnd(BattleGrid grid)
+        {
+            Actor.MoveTo(grid);
+            _path = null;
+            _running = false;
+            _pathLine.enabled = false;
+            _pathLine = null;
+            BattleRunManager.InputLock = false;
         }
     }
 }
