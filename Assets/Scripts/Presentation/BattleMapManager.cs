@@ -18,6 +18,7 @@ namespace GT.Presentation
         private Tween _backgroundTween;
 
         private bool _moveMode;
+
         public bool MoveMode
         {
             get => _moveMode;
@@ -34,7 +35,6 @@ namespace GT.Presentation
                     _backgroundTween?.Kill();
                     _backgroundTween = gridBackground.material.DOFloat(.25f, "_Alpha", .2f).SetEase(Ease.OutCubic);
                 }
-
             }
         }
 
@@ -51,13 +51,13 @@ namespace GT.Presentation
             {
                 var ind = Instantiate(gridIndTemplate, gridIndRoot);
                 ind.transform.localPosition = new Vector3(grid.x, 0, grid.y);
-                ind.gameObject.SetActive(false);
                 ind.BattleGrid = grid;
+                ind.gameObject.SetActive(false);
                 _gIndicators.Add(grid, ind);
                 _cIndicators.Add(ind.GetComponentInChildren<Collider>(), ind);
             }
-
             _pathLine = Instantiate(lineTemplate, gridIndRoot);
+            RefreshIndicators();
         }
 
         private Indicator _selectedInd;
@@ -71,20 +71,20 @@ namespace GT.Presentation
                 {
                     if (value == null) return;
                     _selectedInd = value;
-                    _selectedInd.OnSelected();
+                    _selectedInd.State = IndicatorState.Selected;
                 }
                 else
                 {
                     if (value == null)
                     {
-                        _selectedInd.OnDeselected();
+                        _selectedInd.State = IndicatorState.Default;
                         _selectedInd = null;
                     }
                     else
                     {
-                        _selectedInd.OnDeselected();
+                        _selectedInd.State = IndicatorState.Default;
                         _selectedInd = value;
-                        _selectedInd.OnSelected();
+                        _selectedInd.State = IndicatorState.Selected;
                     }
                 }
             }
@@ -99,15 +99,22 @@ namespace GT.Presentation
                 {
                     if (_cIndicators.TryGetValue(hit.collider, out var target))
                     {
-                        var path = BattleRun.BattleMap.ShortestPath(BattleRun.Actors[0].BattleGrid, target.BattleGrid);
-                        SelectedInd = target;
-                        ShowPath(BattleRun.Actors[0].BattleGrid, path);
-                        if (Input.GetMouseButtonDown(0))
+                        if (target.BattleGrid.GridState == GridState.Empty)
                         {
-                            var actor = BattleRunManager.Instance.actor;
-                            _ = actor.MoveTo(path);
-                            actor.SetPath(_pathLine, target);
-                            HideIndicators();
+                            var path = BattleRun.BattleMap.ShortestPath(BattleRun.Actors[0].BattleGrid,
+                                target.BattleGrid);
+                            SelectedInd = target;
+                            ShowPath(BattleRun.Actors[0].BattleGrid, path);
+                            if (Input.GetMouseButtonDown(0))
+                            {
+                                MovementInstruction(BattleRunManager.Instance.actor, path);
+                                HideIndicators();
+                            }
+                        }
+                        else
+                        {
+                            SelectedInd = null;
+                            _pathLine.enabled = false;
                         }
                     }
                     else
@@ -118,6 +125,17 @@ namespace GT.Presentation
                 }
             }
         }
+
+        private bool _moving;
+
+        private async void MovementInstruction(ActorManager actor, List<BattleGrid> path)
+        {
+            _moving = true;
+            actor.SetPath(_pathLine, SelectedInd);
+            await actor.MoveTo(path);
+            _moving = false;
+        }
+
 
         private LineRenderer _pathLine;
 
@@ -140,43 +158,73 @@ namespace GT.Presentation
 
         public void ShowIndicators(List<BattleGrid> grids, bool outline = false)
         {
-            var matrix = new int[Size][];
-            for (int i = 0; i < Size; i++)
-            {
-                matrix[i] = new int[Size];
-            }
-
             foreach (var grid in grids)
             {
                 if (_gIndicators.TryGetValue(grid, out var ind))
                 {
                     ind.gameObject.SetActive(true);
-                    matrix[grid.x][grid.y] = -1;
+                    ind.Color = IndicatorColor.Default;
                 }
             }
-            //
-            // if (outline)
-            // {
-            //     for (int i = 0; i < Size; i++)
-            //     {
-            //         for (int j = 0; j < Size; j++)
-            //         {
-            //             if (matrix[i][j] == -1) continue;
-            //             _gIndicators[BattleMap.GetGrid(i, j)]
-            //                 .SetOutline(BattleMapIndicatorHelper.GetGridBit(Size, matrix, i, j));
-            //         }
-            //     }
-            // }
+
+            RefreshIndicators();
+        }
+
+        public void RefreshIndicators()
+        {
+            foreach (var grid in BattleMap.battleGrids)
+            {
+                if (_gIndicators.TryGetValue(grid, out var ind))
+                {
+                    RefreshIndicator(ind);
+                    if(!ind.setTarget) ind.State = IndicatorState.Default;
+                    if (grid.GridState != GridState.Empty)
+                    {
+                        ind.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        public void RefreshIndicator(BattleGrid grid)
+        {
+            var ind = _gIndicators[grid];
+            ind.Color = grid.GridState switch
+            {
+                GridState.Empty => IndicatorColor.Default,
+                GridState.Player => IndicatorColor.Player,
+                GridState.Ally => IndicatorColor.Ally,
+                GridState.Enemy => IndicatorColor.Enemy,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+        public void RefreshIndicator(Indicator ind)
+        {
+            ind.Color = ind.BattleGrid.GridState switch
+            {
+                GridState.Empty => IndicatorColor.Default,
+                GridState.Player => IndicatorColor.Player,
+                GridState.Ally => IndicatorColor.Ally,
+                GridState.Enemy => IndicatorColor.Enemy,
+                _ => throw new ArgumentOutOfRangeException()
+            };
         }
 
         public void HideIndicators()
         {
-            foreach (var ind in _gIndicators.Values.Where(ind => !ind.setTarget))
+            foreach (var ind in _gIndicators.Values.Where(ind =>
+                         !ind.setTarget || ind.BattleGrid.GridState == GridState.Enemy))
             {
                 ind.gameObject.SetActive(false);
             }
 
+            if (!_moving)
+            {
+                _pathLine.enabled = false;
+            }
+
             MoveMode = false;
+            RefreshIndicators();
         }
     }
 }

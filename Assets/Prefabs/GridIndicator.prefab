@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 4272795133696958269}
   - component: {fileID: 4812816475193369388}
   m_Layer: 0
-  m_Name: Quad
+  m_Name: GridIndicator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -220,7 +220,7 @@ Transform:
   - {fileID: 4272795133696958270}
   - {fileID: 7530846732622535930}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1488145804107432639
 MonoBehaviour:
@@ -243,3 +243,9 @@ MonoBehaviour:
   liftRenderer: {fileID: 5123578838375909531}
   defaultTexture: {fileID: 2800000, guid: f6630bcb3cec67a4dbd4b9fb2ae1d9f9, type: 3}
   targetTexture: {fileID: 2800000, guid: 145f30920096aeb49ab171a9a2d8debb, type: 3}
+  setTarget: 0
+  colors:
+  - {r: 3.4321406, g: 4.5398664, b: 8.800361, a: 0}
+  - {r: 0, g: 3.8734834, b: 11.749172, a: 0}
+  - {r: 0, g: 11.749171, b: 0.25804004, a: 0}
+  - {r: 11.749171, g: 0.6496859, b: 0, a: 0}

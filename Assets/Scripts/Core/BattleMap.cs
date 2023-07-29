@@ -38,9 +38,9 @@ namespace GT.Core
             {
                 var u = MinDistance(dist, visited, num);
                 visited[u] = true;
-                for (int j = 0; j < battleGrids[u].neighbors.Count; j++)
+                for (int j = 0; j < battleGrids[u].Neighbors.Count; j++)
                 {
-                    var neigbor = battleGrids[u].neighbors[j];
+                    var neigbor = battleGrids[u].Neighbors[j];
                     if (!visited[neigbor.End] && neigbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
                         dist[u] + neigbor.Weight < dist[neigbor.End]
                        )
@@ -85,9 +85,9 @@ namespace GT.Core
             {
                 var u = MinDistance(dist, visited, num);
                 visited[u] = true;
-                for (int j = 0; j < battleGrids[u].neighbors.Count; j++)
+                for (int j = 0; j < battleGrids[u].Neighbors.Count; j++)
                 {
-                    var neigbor = battleGrids[u].neighbors[j];
+                    var neigbor = battleGrids[u].Neighbors[j];
                     if (!visited[neigbor.End] && neigbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
                         dist[u] + neigbor.Weight < dist[neigbor.End]
                        )
@@ -138,7 +138,23 @@ namespace GT.Core
     public class BattleGrid
     {
         public int idx, x, y, height;
-        public List<GridNeighbor> neighbors = new List<GridNeighbor>();
+        public List<GridNeighbor> Neighbors = new List<GridNeighbor>();
+        public Actor Actor = null;
+
+        public GridState GridState
+        {
+            get
+            {
+                if (Actor == null) return GridState.Empty;
+                return Actor.Type switch
+                {
+                    ActorType.Ally => GridState.Ally,
+                    ActorType.Player => GridState.Player,
+                    ActorType.Enemy => GridState.Enemy,
+                    _ => GridState.Enemy
+                };
+            }
+        }
 
         public BattleGrid(int idx, int x, int y, int height)
         {
@@ -162,6 +178,7 @@ namespace GT.Core
         {
             return new Vector3(x, 0, y);
         }
+        
     }
     
     public class GridNeighbor
@@ -176,5 +193,13 @@ namespace GT.Core
             End = grid.idx;
             Weight = w;
         }
+    }
+
+    public enum GridState
+    {
+        Empty,
+        Player,
+        Ally,
+        Enemy,
     }
 }

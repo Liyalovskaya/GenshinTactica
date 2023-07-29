@@ -21,27 +21,43 @@ namespace GT.Presentation
 
         public bool setTarget = false;
 
+        [SerializeField] [ColorUsage(false, true)]
+        private Color[] colors;
+
+        private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
+
+        public IndicatorState State
+        {
+            set
+            {
+                switch (value)
+                {
+                    case IndicatorState.Default:
+                        indRenderer.enabled = true;
+                        _indMaterial.SetFloat(Alpha, .25f);
+                        _indMaterial.SetTexture(MainTex, defaultTexture);
+                        liftRenderer.enabled = false;
+                        break;
+                    case IndicatorState.Selected:
+                        indRenderer.enabled = true;
+                        _indMaterial.SetFloat(Alpha, 1f);
+                        _indMaterial.SetTexture(MainTex, targetTexture);
+                        liftRenderer.enabled = true;
+                        _liftMaterial.SetFloat(Alpha, 1f);
+                        break;
+                }
+            }
+        }
+
+        public IndicatorColor Color
+        {
+            set => _indMaterial.SetColor(BaseColor, colors[(int)value]);
+        }
+
         private void Awake()
         {
             _indMaterial = indRenderer.material;
             _liftMaterial = liftRenderer.material;
-
-        }
-
-        public void OnSelected()
-        {
-            _indMaterial.SetFloat(Alpha,1f);
-            _indMaterial.SetTexture(MainTex, targetTexture);
-            liftRenderer.enabled = true;
-            _liftMaterial.SetFloat(Alpha, 1f);
-        }
-
-        public void OnDeselected()
-        {
-            _indMaterial.SetFloat(Alpha,.25f);
-            _indMaterial.SetTexture(MainTex, defaultTexture);
-            liftRenderer.enabled = false;
-            _liftMaterial.SetFloat(Alpha, 0f);
         }
 
         public void SetTarget()
@@ -49,33 +65,26 @@ namespace GT.Presentation
             setTarget = true;
         }
 
-        public async Task ReachTarget()
+        public void ReachTarget()
         {
             setTarget = false;
-            var t = .2f;
-            DOVirtual.Float(1f, 0f, t, x =>
-            {
-                _indMaterial.SetFloat(Alpha, x);
-                _liftMaterial.SetFloat(Alpha, x);
-
-            }).SetEase(Ease.OutCubic);
-            await UniTask.WaitForSeconds(t);
             liftRenderer.enabled = false;
-            gameObject.SetActive(false);
+            State = IndicatorState.Default;
+            BattleMapManager.Instance.RefreshIndicator(BattleGrid);
         }
+    }
 
-        // public void SetOutline(int bit)
-        // {
-        //     if (bit == 0)
-        //     {
-        //         outlineRenderer.gameObject.SetActive(false);
-        //         return;
-        //     }
-        //
-        //     if (bit == 2)
-        //     {
-        //         _outlineMaterial.SetInt();
-        //     }
-        // }
+    public enum IndicatorState
+    {
+        Default,
+        Selected,
+    }
+
+    public enum IndicatorColor
+    {
+        Default,
+        Player,
+        Ally,
+        Enemy,
     }
 }

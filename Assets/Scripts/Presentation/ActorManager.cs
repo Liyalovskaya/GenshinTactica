@@ -71,7 +71,9 @@ namespace GT.Presentation
             _path = queue;
             _pathIdx = 0;
             _agent.speed = runningSpeed;
-
+            var prevGrid = Actor.BattleGrid;
+            Actor.BattleGrid = null;
+            BattleMapManager.Instance.RefreshIndicator(prevGrid);
             await Turning(_path[0].GetXYPosition());
 
             _animator.ResetTrigger("Run");
@@ -80,7 +82,6 @@ namespace GT.Presentation
             {
                 await MoveToGrid(_path[i]);
             }
-
             ReachEnd(_path[^1]);
         }
 
@@ -112,9 +113,10 @@ namespace GT.Presentation
                 await UniTask.WaitUntil(() => _agent.remainingDistance < endLength);
                 _animator.ResetTrigger("Idle");
                 _animator.SetTrigger("Idle");
+                Actor.BattleGrid = _path[^1];
+                _targetInd.ReachTarget();
                 var t = 2 * endLength / runningSpeed;
                 DOVirtual.Float(runningSpeed, 0f, t, x => _agent.speed = x).SetEase(Ease.Linear);
-                _ = _targetInd.ReachTarget();
                 await UniTask.WaitForSeconds(t);
                 _agent.ResetPath();
 
@@ -124,7 +126,6 @@ namespace GT.Presentation
 
         private void ReachEnd(BattleGrid grid)
         {
-            Actor.MoveTo(grid);
             _path = null;
             _running = false;
             _pathLine.enabled = false;

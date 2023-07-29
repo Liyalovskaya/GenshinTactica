@@ -19,7 +19,11 @@ namespace GT.Presentation
             BattleRun = new BattleRun(battleMapObject.battleMap);
             BattleRun.BattleMap.Size = battleMapObject.size;
             var klee = new Actor("Klee", BattleRun.BattleMap.GetGrid(8, 5));
+            var bucket = new Actor("bucket", BattleRun.BattleMap.GetGrid(11, 8));
+            klee.Type = ActorType.Player;
+            bucket.Type = ActorType.Enemy;
             BattleRun.SetActor(klee);
+            BattleRun.SetActor(bucket);
             actor.Actor = klee;
             BattleRun.CurrentActor = klee;
             BattleMapManager.Instance.Initialize(BattleRun.BattleMap);

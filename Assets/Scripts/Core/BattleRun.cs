@@ -21,21 +21,22 @@ namespace GT.Core
         {
             Actors.Add(actor);
         }
-        
+
+
         
         public void BuildConnection()
         {
             foreach (var grid in BattleMap.battleGrids)
             {
-                grid.neighbors?.Clear();
-                grid.neighbors = new List<GridNeighbor>();
+                grid.Neighbors?.Clear();
+                grid.Neighbors = new List<GridNeighbor>();
                 foreach (var other in BattleMap.battleGrids.Where(other =>
                              !other.Equals(grid) && grid.DistanceTo(other) < 1.5f))
                 {
                     if (other.x == grid.x || other.y == grid.y)
                     {
                         // map.gridConnections.Add(new Connection(grid, other, 1));
-                        grid.neighbors.Add(new GridNeighbor(other,100));
+                        grid.Neighbors.Add(new GridNeighbor(other,100));
                     }
                     else
                     {
@@ -44,7 +45,7 @@ namespace GT.Core
                         if (BattleMap.GetGrid(grid.x + offsetX, grid.y) == null) continue;
                         if (BattleMap.GetGrid(grid.x, grid.y + offsetY) == null) continue;
                         // map.gridConnections.Add(new Connection(grid, other, 1.414f));
-                        grid.neighbors.Add(new GridNeighbor(other,141));
+                        grid.Neighbors.Add(new GridNeighbor(other,141));
                     }
                 }
             }
