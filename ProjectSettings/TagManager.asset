@@ -12,18 +12,18 @@ TagManager:
   - Water
   - UI
   - Character
+  - Scene
+  - Interactive
   - 
   - 
   - 
   - 
   - 
   - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - PlayerHighlight
+  - AllyHighlight
+  - EnemyHighlight
+  - ObjectHighlight
   - 
   - 
   - 

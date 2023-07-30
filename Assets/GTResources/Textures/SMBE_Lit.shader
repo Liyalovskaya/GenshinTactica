@@ -15,7 +15,7 @@ Shader "SMBE_Lit"
 		_SpecularScale("SpecularScale", Float) = 1
 		_Smoothness("Smoothness", Float) = 0.5
 		[HDR]_EmissionColor("EmissionColor", Color) = (1,1,1,0)
-		[ASEEnd]_StencilRef("StencilRef", Int) = 0
+		[ASEEnd][Header(Stencil)]_StencilRef("StencilRef", Int) = 0
 
 
 		//_TransmissionShadow( "Transmission Shadow", Range( 0, 1 ) ) = 0.5
@@ -58,7 +58,12 @@ Shader "SMBE_Lit"
 		Offset 0 , 0
 		AlphaToMask Off
 
-		
+		Stencil
+		{
+			Ref 0
+			Comp Always
+			Fail Zero
+		}
 
 		HLSLINCLUDE
 		#pragma target 4.5
@@ -188,7 +193,7 @@ Shader "SMBE_Lit"
 			{
 				Ref [_StencilRef]
 				Comp Always
-				Pass Keep
+				Pass Replace
 			}
 
 			HLSLPROGRAM
@@ -202,7 +207,6 @@ Shader "SMBE_Lit"
 			#define _SPECULAR_SETUP 1
 			#pragma shader_feature_local_fragment _SPECULAR_SETUP
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -255,8 +259,7 @@ Shader "SMBE_Lit"
 				#define ENABLE_TERRAIN_PERPIXEL_NORMAL
 			#endif
 
-			#define ASE_NEEDS_FRAG_SCREEN_POSITION
-
+			
 
 			#if defined(ASE_EARLY_Z_DEPTH_OPTIMIZE) && (SHADER_TARGET >= 45)
 				#define ASE_SV_DEPTH SV_DepthLessEqual
@@ -351,18 +354,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -584,12 +576,6 @@ Shader "SMBE_Lit"
 				
 				float3 temp_cast_2 = (( tex2DNode16.r * _SpecularScale )).xxx;
 				
-				float4 ase_screenPosNorm = ScreenPos / ScreenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( ScreenPos.w < 3.0 ? saturate( (0.0 + (ScreenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
-				
 
 				float3 BaseColor = ( tex2D( _DiffuseMap, UV20 ) * _ColorTint ).rgb;
 				float3 Normal = unpack12;
@@ -598,8 +584,8 @@ Shader "SMBE_Lit"
 				float Metallic = 0;
 				float Smoothness = _Smoothness;
 				float Occlusion = 1;
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
 				float AlphaClipThresholdShadow = 0.5;
 				float3 BakedGI = 0;
 				float3 RefractionColor = 1;
@@ -850,7 +836,6 @@ Shader "SMBE_Lit"
 			#define ASE_FOG 1
 			#define _SPECULAR_SETUP 1
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -875,8 +860,7 @@ Shader "SMBE_Lit"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
             #endif
 
-			#define ASE_NEEDS_FRAG_SCREEN_POSITION
-
+			
 
 			#if defined(ASE_EARLY_Z_DEPTH_OPTIMIZE) && (SHADER_TARGET >= 45)
 				#define ASE_SV_DEPTH SV_DepthLessEqual
@@ -959,18 +943,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			float3 _LightDirection;
 			float3 _LightPosition;
 
@@ -1136,15 +1109,10 @@ Shader "SMBE_Lit"
 					#endif
 				#endif
 
-				float4 ase_screenPosNorm = ScreenPos / ScreenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( ScreenPos.w < 3.0 ? saturate( (0.0 + (ScreenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
 				
 
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
 				float AlphaClipThresholdShadow = 0.5;
 
 				#ifdef ASE_DEPTH_WRITE_ON
@@ -1191,7 +1159,6 @@ Shader "SMBE_Lit"
 			#define ASE_FOG 1
 			#define _SPECULAR_SETUP 1
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -1214,8 +1181,7 @@ Shader "SMBE_Lit"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
             #endif
 
-			#define ASE_NEEDS_FRAG_SCREEN_POSITION
-
+			
 
 			#if defined(ASE_EARLY_Z_DEPTH_OPTIMIZE) && (SHADER_TARGET >= 45)
 				#define ASE_SV_DEPTH SV_DepthLessEqual
@@ -1298,18 +1264,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -1457,15 +1412,10 @@ Shader "SMBE_Lit"
 					#endif
 				#endif
 
-				float4 ase_screenPosNorm = ScreenPos / ScreenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( ScreenPos.w < 3.0 ? saturate( (0.0 + (ScreenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
 				
 
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
 				#ifdef ASE_DEPTH_WRITE_ON
 					float DepthValue = IN.clipPos.z;
 				#endif
@@ -1491,340 +1441,6 @@ Shader "SMBE_Lit"
 		Pass
 		{
 			
-			Name "Meta"
-			Tags { "LightMode"="Meta" }
-
-			Cull Off
-
-			HLSLPROGRAM
-
-			#define _NORMAL_DROPOFF_TS 1
-			#define ASE_FOG 1
-			#define _SPECULAR_SETUP 1
-			#pragma shader_feature_local_fragment _SPECULAR_SETUP
-			#define _EMISSION
-			#define _ALPHATEST_ON 1
-			#define _NORMALMAP 1
-			#define ASE_SRP_VERSION 140008
-
-
-			#pragma vertex vert
-			#pragma fragment frag
-
-			#pragma shader_feature EDITOR_VISUALIZATION
-
-			#define SHADERPASS SHADERPASS_META
-
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Texture.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureStack.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MetaInput.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
-
-			
-
-			struct VertexInput
-			{
-				float4 vertex : POSITION;
-				float3 ase_normal : NORMAL;
-				float4 texcoord0 : TEXCOORD0;
-				float4 texcoord1 : TEXCOORD1;
-				float4 texcoord2 : TEXCOORD2;
-				
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-			};
-
-			struct VertexOutput
-			{
-				float4 clipPos : SV_POSITION;
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-					float3 worldPos : TEXCOORD0;
-				#endif
-				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-					float4 shadowCoord : TEXCOORD1;
-				#endif
-				#ifdef EDITOR_VISUALIZATION
-					float4 VizUV : TEXCOORD2;
-					float4 LightCoord : TEXCOORD3;
-				#endif
-				float4 ase_texcoord4 : TEXCOORD4;
-				float4 ase_texcoord5 : TEXCOORD5;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-				UNITY_VERTEX_OUTPUT_STEREO
-			};
-
-			CBUFFER_START(UnityPerMaterial)
-			float4 _ColorTint;
-			float4 _EmissionColor;
-			float2 _Tiling;
-			float2 _Offset;
-			int _StencilRef;
-			float _NormalScale;
-			float _SpecularScale;
-			float _Smoothness;
-			#ifdef ASE_TRANSMISSION
-				float _TransmissionShadow;
-			#endif
-			#ifdef ASE_TRANSLUCENCY
-				float _TransStrength;
-				float _TransNormal;
-				float _TransScattering;
-				float _TransDirect;
-				float _TransAmbient;
-				float _TransShadow;
-			#endif
-			#ifdef ASE_TESSELLATION
-				float _TessPhongStrength;
-				float _TessValue;
-				float _TessMin;
-				float _TessMax;
-				float _TessEdgeLength;
-				float _TessMaxDisp;
-			#endif
-			CBUFFER_END
-
-			// Property used by ScenePickingPass
-			#ifdef SCENEPICKINGPASS
-				float4 _SelectionID;
-			#endif
-
-			// Properties used by SceneSelectionPass
-			#ifdef SCENESELECTIONPASS
-				int _ObjectId;
-				int _PassValue;
-			#endif
-
-			sampler2D _DiffuseMap;
-			sampler2D _SMBEMap;
-
-
-			//#include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/Varyings.hlsl"
-			//#include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/LightingMetaPass.hlsl"
-
-			//#ifdef HAVE_VFX_MODIFICATION
-			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
-			//#endif
-
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
-			
-
-			VertexOutput VertexFunction( VertexInput v  )
-			{
-				VertexOutput o = (VertexOutput)0;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-				float4 screenPos = ComputeScreenPos(ase_clipPos);
-				o.ase_texcoord5 = screenPos;
-				
-				o.ase_texcoord4.xy = v.texcoord0.xy;
-				
-				//setting value to unused interpolator channels and avoid initialization warnings
-				o.ase_texcoord4.zw = 0;
-
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					float3 defaultVertexValue = v.vertex.xyz;
-				#else
-					float3 defaultVertexValue = float3(0, 0, 0);
-				#endif
-
-				float3 vertexValue = defaultVertexValue;
-
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					v.vertex.xyz = vertexValue;
-				#else
-					v.vertex.xyz += vertexValue;
-				#endif
-
-				v.ase_normal = v.ase_normal;
-
-				float3 positionWS = TransformObjectToWorld( v.vertex.xyz );
-
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-					o.worldPos = positionWS;
-				#endif
-
-				o.clipPos = MetaVertexPosition( v.vertex, v.texcoord1.xy, v.texcoord1.xy, unity_LightmapST, unity_DynamicLightmapST );
-
-				#ifdef EDITOR_VISUALIZATION
-					float2 VizUV = 0;
-					float4 LightCoord = 0;
-					UnityEditorVizData(v.vertex.xyz, v.texcoord0.xy, v.texcoord1.xy, v.texcoord2.xy, VizUV, LightCoord);
-					o.VizUV = float4(VizUV, 0, 0);
-					o.LightCoord = LightCoord;
-				#endif
-
-				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-					VertexPositionInputs vertexInput = (VertexPositionInputs)0;
-					vertexInput.positionWS = positionWS;
-					vertexInput.positionCS = o.clipPos;
-					o.shadowCoord = GetShadowCoord( vertexInput );
-				#endif
-
-				return o;
-			}
-
-			#if defined(ASE_TESSELLATION)
-			struct VertexControl
-			{
-				float4 vertex : INTERNALTESSPOS;
-				float3 ase_normal : NORMAL;
-				float4 texcoord0 : TEXCOORD0;
-				float4 texcoord1 : TEXCOORD1;
-				float4 texcoord2 : TEXCOORD2;
-				
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-			};
-
-			struct TessellationFactors
-			{
-				float edge[3] : SV_TessFactor;
-				float inside : SV_InsideTessFactor;
-			};
-
-			VertexControl vert ( VertexInput v )
-			{
-				VertexControl o;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				o.vertex = v.vertex;
-				o.ase_normal = v.ase_normal;
-				o.texcoord0 = v.texcoord0;
-				o.texcoord1 = v.texcoord1;
-				o.texcoord2 = v.texcoord2;
-				
-				return o;
-			}
-
-			TessellationFactors TessellationFunction (InputPatch<VertexControl,3> v)
-			{
-				TessellationFactors o;
-				float4 tf = 1;
-				float tessValue = _TessValue; float tessMin = _TessMin; float tessMax = _TessMax;
-				float edgeLength = _TessEdgeLength; float tessMaxDisp = _TessMaxDisp;
-				#if defined(ASE_FIXED_TESSELLATION)
-				tf = FixedTess( tessValue );
-				#elif defined(ASE_DISTANCE_TESSELLATION)
-				tf = DistanceBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, tessValue, tessMin, tessMax, GetObjectToWorldMatrix(), _WorldSpaceCameraPos );
-				#elif defined(ASE_LENGTH_TESSELLATION)
-				tf = EdgeLengthBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams );
-				#elif defined(ASE_LENGTH_CULL_TESSELLATION)
-				tf = EdgeLengthBasedTessCull(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, tessMaxDisp, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams, unity_CameraWorldClipPlanes );
-				#endif
-				o.edge[0] = tf.x; o.edge[1] = tf.y; o.edge[2] = tf.z; o.inside = tf.w;
-				return o;
-			}
-
-			[domain("tri")]
-			[partitioning("fractional_odd")]
-			[outputtopology("triangle_cw")]
-			[patchconstantfunc("TessellationFunction")]
-			[outputcontrolpoints(3)]
-			VertexControl HullFunction(InputPatch<VertexControl, 3> patch, uint id : SV_OutputControlPointID)
-			{
-				return patch[id];
-			}
-
-			[domain("tri")]
-			VertexOutput DomainFunction(TessellationFactors factors, OutputPatch<VertexControl, 3> patch, float3 bary : SV_DomainLocation)
-			{
-				VertexInput o = (VertexInput) 0;
-				o.vertex = patch[0].vertex * bary.x + patch[1].vertex * bary.y + patch[2].vertex * bary.z;
-				o.ase_normal = patch[0].ase_normal * bary.x + patch[1].ase_normal * bary.y + patch[2].ase_normal * bary.z;
-				o.texcoord0 = patch[0].texcoord0 * bary.x + patch[1].texcoord0 * bary.y + patch[2].texcoord0 * bary.z;
-				o.texcoord1 = patch[0].texcoord1 * bary.x + patch[1].texcoord1 * bary.y + patch[2].texcoord1 * bary.z;
-				o.texcoord2 = patch[0].texcoord2 * bary.x + patch[1].texcoord2 * bary.y + patch[2].texcoord2 * bary.z;
-				
-				#if defined(ASE_PHONG_TESSELLATION)
-				float3 pp[3];
-				for (int i = 0; i < 3; ++i)
-					pp[i] = o.vertex.xyz - patch[i].ase_normal * (dot(o.vertex.xyz, patch[i].ase_normal) - dot(patch[i].vertex.xyz, patch[i].ase_normal));
-				float phongStrength = _TessPhongStrength;
-				o.vertex.xyz = phongStrength * (pp[0]*bary.x + pp[1]*bary.y + pp[2]*bary.z) + (1.0f-phongStrength) * o.vertex.xyz;
-				#endif
-				UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
-				return VertexFunction(o);
-			}
-			#else
-			VertexOutput vert ( VertexInput v )
-			{
-				return VertexFunction( v );
-			}
-			#endif
-
-			half4 frag(VertexOutput IN  ) : SV_TARGET
-			{
-				UNITY_SETUP_INSTANCE_ID(IN);
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
-
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-					float3 WorldPosition = IN.worldPos;
-				#endif
-
-				float4 ShadowCoords = float4( 0, 0, 0, 0 );
-
-				#if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-					#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
-						ShadowCoords = IN.shadowCoord;
-					#elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
-						ShadowCoords = TransformWorldToShadowCoord( WorldPosition );
-					#endif
-				#endif
-
-				float2 texCoord19 = IN.ase_texcoord4.xy * _Tiling + _Offset;
-				float2 UV20 = texCoord19;
-				
-				float4 tex2DNode16 = tex2D( _SMBEMap, UV20 );
-				
-				float4 screenPos = IN.ase_texcoord5;
-				float4 ase_screenPosNorm = screenPos / screenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( screenPos.w < 3.0 ? saturate( (0.0 + (screenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
-				
-
-				float3 BaseColor = ( tex2D( _DiffuseMap, UV20 ) * _ColorTint ).rgb;
-				float3 Emission = ( tex2DNode16.a * _EmissionColor ).rgb;
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
-
-				#ifdef _ALPHATEST_ON
-					clip(Alpha - AlphaClipThreshold);
-				#endif
-
-				MetaInput metaInput = (MetaInput)0;
-				metaInput.Albedo = BaseColor;
-				metaInput.Emission = Emission;
-				#ifdef EDITOR_VISUALIZATION
-					metaInput.VizUV = IN.VizUV.xy;
-					metaInput.LightCoord = IN.LightCoord;
-				#endif
-
-				return UnityMetaFragment(metaInput);
-			}
-			ENDHLSL
-		}
-
-		
-		Pass
-		{
-			
 			Name "Universal2D"
 			Tags { "LightMode"="Universal2D" }
 
@@ -1840,7 +1456,6 @@ Shader "SMBE_Lit"
 			#define ASE_FOG 1
 			#define _SPECULAR_SETUP 1
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -1879,7 +1494,6 @@ Shader "SMBE_Lit"
 					float4 shadowCoord : TEXCOORD1;
 				#endif
 				float4 ase_texcoord2 : TEXCOORD2;
-				float4 ase_texcoord3 : TEXCOORD3;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -1935,18 +1549,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -1954,10 +1557,6 @@ Shader "SMBE_Lit"
 				UNITY_TRANSFER_INSTANCE_ID( v, o );
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO( o );
 
-				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-				float4 screenPos = ComputeScreenPos(ase_clipPos);
-				o.ase_texcoord3 = screenPos;
-				
 				o.ase_texcoord2.xy = v.ase_texcoord.xy;
 				
 				//setting value to unused interpolator channels and avoid initialization warnings
@@ -2100,17 +1699,10 @@ Shader "SMBE_Lit"
 				float2 texCoord19 = IN.ase_texcoord2.xy * _Tiling + _Offset;
 				float2 UV20 = texCoord19;
 				
-				float4 screenPos = IN.ase_texcoord3;
-				float4 ase_screenPosNorm = screenPos / screenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( screenPos.w < 3.0 ? saturate( (0.0 + (screenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
-				
 
 				float3 BaseColor = ( tex2D( _DiffuseMap, UV20 ) * _ColorTint ).rgb;
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
 
 				half4 color = half4(BaseColor, Alpha );
 
@@ -2143,7 +1735,6 @@ Shader "SMBE_Lit"
 			#define ASE_FOG 1
 			#define _SPECULAR_SETUP 1
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -2168,8 +1759,7 @@ Shader "SMBE_Lit"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
             #endif
 
-			#define ASE_NEEDS_FRAG_SCREEN_POSITION
-
+			
 
 			#if defined(ASE_EARLY_Z_DEPTH_OPTIMIZE) && (SHADER_TARGET >= 45)
 				#define ASE_SV_DEPTH SV_DepthLessEqual
@@ -2256,18 +1846,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -2438,16 +2017,10 @@ Shader "SMBE_Lit"
 				float3 unpack12 = UnpackNormalScale( tex2D( _NormalMap, UV20 ), _NormalScale );
 				unpack12.z = lerp( 1, unpack12.z, saturate(_NormalScale) );
 				
-				float4 ase_screenPosNorm = ScreenPos / ScreenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( ScreenPos.w < 3.0 ? saturate( (0.0 + (ScreenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
-				
 
 				float3 Normal = unpack12;
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
 				#ifdef ASE_DEPTH_WRITE_ON
 					float DepthValue = IN.clipPos.z;
 				#endif
@@ -2510,7 +2083,7 @@ Shader "SMBE_Lit"
 			{
 				Ref 0
 				Comp Always
-				Pass Keep
+				Pass Replace
 			}
 
 			HLSLPROGRAM
@@ -2524,7 +2097,6 @@ Shader "SMBE_Lit"
 			#define _SPECULAR_SETUP 1
 			#pragma shader_feature_local_fragment _SPECULAR_SETUP
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -2572,8 +2144,7 @@ Shader "SMBE_Lit"
 				#define ENABLE_TERRAIN_PERPIXEL_NORMAL
 			#endif
 
-			#define ASE_NEEDS_FRAG_SCREEN_POSITION
-
+			
 
 			#if defined(ASE_EARLY_Z_DEPTH_OPTIMIZE) && (SHADER_TARGET >= 45)
 				#define ASE_SV_DEPTH SV_DepthLessEqual
@@ -2665,18 +2236,7 @@ Shader "SMBE_Lit"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/UnityGBuffer.hlsl"
 			//#include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/PBRGBufferPass.hlsl"
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -2891,12 +2451,6 @@ Shader "SMBE_Lit"
 				
 				float3 temp_cast_2 = (( tex2DNode16.r * _SpecularScale )).xxx;
 				
-				float4 ase_screenPosNorm = ScreenPos / ScreenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( ScreenPos.w < 3.0 ? saturate( (0.0 + (ScreenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
-				
 
 				float3 BaseColor = ( tex2D( _DiffuseMap, UV20 ) * _ColorTint ).rgb;
 				float3 Normal = unpack12;
@@ -2905,8 +2459,8 @@ Shader "SMBE_Lit"
 				float Metallic = 0;
 				float Smoothness = _Smoothness;
 				float Occlusion = 1;
-				float Alpha = 0.5;
-				float AlphaClipThreshold = dither38;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
 				float AlphaClipThresholdShadow = 0.5;
 				float3 BakedGI = 0;
 				float3 RefractionColor = 1;
@@ -3023,7 +2577,6 @@ Shader "SMBE_Lit"
 			#define ASE_FOG 1
 			#define _SPECULAR_SETUP 1
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -3059,7 +2612,7 @@ Shader "SMBE_Lit"
 			struct VertexOutput
 			{
 				float4 clipPos : SV_POSITION;
-				float4 ase_texcoord : TEXCOORD0;
+				
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -3114,18 +2667,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			struct SurfaceDescription
 			{
 				float Alpha;
@@ -3141,9 +2683,6 @@ Shader "SMBE_Lit"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-				float4 screenPos = ComputeScreenPos(ase_clipPos);
-				o.ase_texcoord = screenPos;
 				
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
@@ -3252,16 +2791,10 @@ Shader "SMBE_Lit"
 			{
 				SurfaceDescription surfaceDescription = (SurfaceDescription)0;
 
-				float4 screenPos = IN.ase_texcoord;
-				float4 ase_screenPosNorm = screenPos / screenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( screenPos.w < 3.0 ? saturate( (0.0 + (screenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
 				
 
-				surfaceDescription.Alpha = 0.5;
-				surfaceDescription.AlphaClipThreshold = dither38;
+				surfaceDescription.Alpha = 1;
+				surfaceDescription.AlphaClipThreshold = 0.5;
 
 				#if _ALPHATEST_ON
 					float alphaClipThreshold = 0.01f;
@@ -3298,7 +2831,6 @@ Shader "SMBE_Lit"
 			#define ASE_FOG 1
 			#define _SPECULAR_SETUP 1
 			#define _EMISSION
-			#define _ALPHATEST_ON 1
 			#define _NORMALMAP 1
 			#define ASE_SRP_VERSION 140008
 
@@ -3334,7 +2866,7 @@ Shader "SMBE_Lit"
 			struct VertexOutput
 			{
 				float4 clipPos : SV_POSITION;
-				float4 ase_texcoord : TEXCOORD0;
+				
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -3389,18 +2921,7 @@ Shader "SMBE_Lit"
 			//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VisualEffectVertex.hlsl"
 			//#endif
 
-			inline float Dither4x4Bayer( int x, int y )
-			{
-				const float dither[ 16 ] = {
-			 1,  9,  3, 11,
-			13,  5, 15,  7,
-			 4, 12,  2, 10,
-			16,  8, 14,  6 };
-				int r = y * 4 + x;
-				return dither[r] / 16; // same # of instructions as pre-dividing due to compiler magic
-			}
 			
-
 			struct SurfaceDescription
 			{
 				float Alpha;
@@ -3416,9 +2937,6 @@ Shader "SMBE_Lit"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-				float4 screenPos = ComputeScreenPos(ase_clipPos);
-				o.ase_texcoord = screenPos;
 				
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
@@ -3526,16 +3044,10 @@ Shader "SMBE_Lit"
 			{
 				SurfaceDescription surfaceDescription = (SurfaceDescription)0;
 
-				float4 screenPos = IN.ase_texcoord;
-				float4 ase_screenPosNorm = screenPos / screenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float2 clipScreen38 = ase_screenPosNorm.xy * _ScreenParams.xy;
-				float dither38 = Dither4x4Bayer( fmod(clipScreen38.x, 4), fmod(clipScreen38.y, 4) );
-				dither38 = step( dither38, ( screenPos.w < 3.0 ? saturate( (0.0 + (screenPos.w - 3.0) * (1.0 - 0.0) / (0.5 - 3.0)) ) : 0.0 ) );
 				
 
-				surfaceDescription.Alpha = 0.5;
-				surfaceDescription.AlphaClipThreshold = dither38;
+				surfaceDescription.Alpha = 1;
+				surfaceDescription.AlphaClipThreshold = 0.5;
 
 				#if _ALPHATEST_ON
 					float alphaClipThreshold = 0.01f;
@@ -3574,42 +3086,29 @@ Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;3;0,0;Float;False;False;-1;
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;4;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;Meta;0;4;Meta;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Meta;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;5;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;Universal2D;0;5;Universal2D;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=Universal2D;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;6;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;DepthNormals;0;6;DepthNormals;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormals;False;False;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;7;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;GBuffer;0;7;GBuffer;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;True;0;False;;255;False;;255;False;;7;False;;1;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalGBuffer;False;False;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;7;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;GBuffer;0;7;GBuffer;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;True;0;False;;255;False;;255;False;;7;False;;3;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalGBuffer;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;8;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;SceneSelectionPass;0;8;SceneSelectionPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=SceneSelectionPass;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;9;0,0;Float;False;False;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;New Amplify Shader;94348b07e5e8bab40bd6c8a1e3df54cd;True;ScenePickingPass;0;9;ScenePickingPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Picking;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.SimpleMultiplyOpNode;14;-413,-232.5;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;1;COLOR;0
 Node;AmplifyShaderEditor.ColorNode;18;-757,438.5;Inherit;False;Property;_EmissionColor;EmissionColor;9;1;[HDR];Create;True;0;0;0;False;0;False;1,1,1,0;0,0,0,1;True;0;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.Vector2Node;21;-1677.607,-897.9331;Inherit;False;Property;_Tiling;Tiling;0;0;Create;True;0;0;0;False;0;False;1,1;1,1;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
-Node;AmplifyShaderEditor.Vector2Node;22;-1663.607,-751.9331;Inherit;False;Property;_Offset;Offset;1;0;Create;True;0;0;0;False;0;False;0,0;0,0;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
-Node;AmplifyShaderEditor.TextureCoordinatesNode;19;-1384.568,-895.4235;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
 Node;AmplifyShaderEditor.ColorNode;13;-764,-209.5;Inherit;False;Property;_ColorTint;ColorTint;3;0;Create;True;0;0;0;False;0;False;1,1,1,0;1,1,1,0;True;0;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
 Node;AmplifyShaderEditor.GetLocalVarNode;23;-1419.669,-270.4418;Inherit;False;20;UV;1;0;OBJECT;;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RegisterLocalVarNode;20;-1047.607,-787.9331;Inherit;False;UV;-1;True;1;0;FLOAT2;0,0;False;1;FLOAT2;0
 Node;AmplifyShaderEditor.SimpleMultiplyOpNode;17;-379,382.5;Inherit;False;2;2;0;FLOAT;0;False;1;COLOR;0,0,0,0;False;1;COLOR;0
 Node;AmplifyShaderEditor.RangedFloatNode;15;-1063,33.5;Inherit;False;Property;_NormalScale;NormalScale;5;0;Create;True;0;0;0;False;0;False;1;1;0;0;0;1;FLOAT;0
 Node;AmplifyShaderEditor.SamplerNode;11;-825,-416.5;Inherit;True;Property;_DiffuseMap;DiffuseMap;2;1;[SingleLineTexture];Create;True;0;0;0;False;0;False;-1;None;b59798a3408becd42a8a7974c56b4ecb;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
 Node;AmplifyShaderEditor.SamplerNode;16;-840,188.5;Inherit;True;Property;_SMBEMap;SMBEMap;6;1;[SingleLineTexture];Create;True;0;0;0;False;0;False;-1;None;75100f8e9306d8944abcb29ddffdc7bf;True;0;False;black;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.IntNode;33;-1688.249,-1106.111;Inherit;False;Property;_StencilRef;StencilRef;10;0;Create;True;0;0;0;True;0;False;0;0;False;0;1;INT;0
 Node;AmplifyShaderEditor.SamplerNode;12;-842,-19.5;Inherit;True;Property;_NormalMap;NormalMap;4;1;[SingleLineTexture];Create;True;0;0;0;False;0;False;-1;None;191abc1a0d080de4eb4975df23e4585d;True;0;True;bump;Auto;True;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
 Node;AmplifyShaderEditor.SimpleMultiplyOpNode;24;-437.6689,77.5582;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;36;-200.4713,174.2809;Inherit;False;Property;_Smoothness;Smoothness;8;0;Create;True;0;0;0;False;0;False;0.5;1;0;0;0;1;FLOAT;0
 Node;AmplifyShaderEditor.RangedFloatNode;25;-1064.669,199.5582;Inherit;False;Property;_SpecularScale;SpecularScale;7;0;Create;True;0;0;0;False;0;False;1;1;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;1;562,-2;Float;False;True;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;SMBE_Lit;94348b07e5e8bab40bd6c8a1e3df54cd;True;Forward;0;1;Forward;20;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;True;True;True;0;True;_StencilRef;255;False;;255;False;;7;False;_StencilRef;1;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForward;False;False;0;;0;0;Standard;41;Workflow;0;638262564656751018;Surface;0;0;  Refraction Model;0;0;  Blend;0;0;Two Sided;1;0;Fragment Normal Space,InvertActionOnDeselection;0;0;Forward Only;0;0;Transmission;0;0;  Transmission Shadow;0.5,False,;0;Translucency;0;0;  Translucency Strength;1,False,;0;  Normal Distortion;0.5,False,;0;  Scattering;2,False,;0;  Direct;0.9,False,;0;  Ambient;0.1,False,;0;  Shadow;0.5,False,;0;Cast Shadows;1;0;  Use Shadow Threshold;0;0;Receive Shadows;1;0;GPU Instancing;1;0;LOD CrossFade;1;0;Built-in Fog;1;0;_FinalColorxAlpha;0;0;Meta Pass;1;0;Override Baked GI;0;0;Extra Pre Pass;0;0;DOTS Instancing;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Write Depth;0;0;  Early Z;0;0;Vertex Position,InvertActionOnDeselection;1;0;Debug Display;0;0;Clear Coat;0;0;0;10;False;True;True;True;True;True;True;True;True;True;False;;False;0
-Node;AmplifyShaderEditor.RangedFloatNode;37;230.5291,268.2809;Inherit;False;Constant;_Float0;Float 0;11;0;Create;True;0;0;0;False;0;False;0.5;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;43;654.5291,605.2809;Inherit;False;Property;_Dither;Dither;11;0;Create;True;0;0;0;False;0;False;0;0;0;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.ScreenPosInputsNode;46;-536.4709,498.2809;Float;False;1;False;0;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.RangedFloatNode;41;-640.4709,868.2809;Inherit;False;Constant;_Float2;Float 2;11;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;39;3.529053,896.2809;Inherit;False;Constant;_Float1;Float 1;11;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.OneMinusNode;44;394.5291,811.2809;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.DitheringNode;38;275.5291,402.2809;Inherit;False;0;False;4;0;FLOAT;0;False;1;SAMPLER2D;;False;2;FLOAT4;0,0,0,0;False;3;SAMPLERSTATE;;False;1;FLOAT;0
-Node;AmplifyShaderEditor.Compare;49;112.5291,420.2809;Inherit;False;4;4;0;FLOAT;0;False;1;FLOAT;3;False;2;FLOAT;1;False;3;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SaturateNode;51;-53.47095,653.2809;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.TFHCRemapNode;50;-287.4709,606.2809;Inherit;False;5;0;FLOAT;0;False;1;FLOAT;3;False;2;FLOAT;0.5;False;3;FLOAT;0;False;4;FLOAT;1;False;1;FLOAT;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;1;562,-2;Float;False;True;-1;2;UnityEditor.ShaderGraphLitGUI;0;12;SMBE_Lit;94348b07e5e8bab40bd6c8a1e3df54cd;True;Forward;0;1;Forward;20;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;True;True;True;0;False;;255;False;;255;False;;7;False;;0;False;;2;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Lit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;True;True;True;0;True;_StencilRef;255;False;;255;False;;7;False;_StencilComp;3;False;_StencilPass;0;False;_StencilFail;0;False;_StencilZFail;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForward;False;False;0;;0;0;Standard;41;Workflow;0;638262564656751018;Surface;0;0;  Refraction Model;0;0;  Blend;0;0;Two Sided;1;0;Fragment Normal Space,InvertActionOnDeselection;0;0;Forward Only;0;0;Transmission;0;0;  Transmission Shadow;0.5,False,;0;Translucency;0;0;  Translucency Strength;1,False,;0;  Normal Distortion;0.5,False,;0;  Scattering;2,False,;0;  Direct;0.9,False,;0;  Ambient;0.1,False,;0;  Shadow;0.5,False,;0;Cast Shadows;1;0;  Use Shadow Threshold;0;0;Receive Shadows;1;0;GPU Instancing;1;0;LOD CrossFade;1;0;Built-in Fog;1;0;_FinalColorxAlpha;0;0;Meta Pass;0;638263271774394993;Override Baked GI;0;0;Extra Pre Pass;0;0;DOTS Instancing;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Write Depth;0;0;  Early Z;0;0;Vertex Position,InvertActionOnDeselection;1;0;Debug Display;0;0;Clear Coat;0;0;0;10;False;True;True;True;False;True;True;True;True;True;False;;False;0
+Node;AmplifyShaderEditor.RangedFloatNode;36;-221.9743,186.8243;Inherit;False;Property;_Smoothness;Smoothness;8;0;Create;True;0;0;0;False;0;False;0.5;1;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.Vector2Node;21;-2119.92,-1257.523;Inherit;False;Property;_Tiling;Tiling;0;0;Create;True;0;0;0;False;0;False;1,1;1,1;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
+Node;AmplifyShaderEditor.Vector2Node;22;-2105.92,-1111.523;Inherit;False;Property;_Offset;Offset;1;0;Create;True;0;0;0;False;0;False;0,0;0,0;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
+Node;AmplifyShaderEditor.TextureCoordinatesNode;19;-1826.881,-1255.014;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.RegisterLocalVarNode;20;-1489.92,-1147.523;Inherit;False;UV;-1;True;1;0;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.IntNode;38;-2103.816,-873.5928;Inherit;False;Property;_StencilRef;StencilRef;10;1;[Header];Create;True;1;Stencil;0;0;True;0;False;0;0;False;0;1;INT;0
 WireConnection;14;0;11;0
 WireConnection;14;1;13;0
-WireConnection;19;0;21;0
-WireConnection;19;1;22;0
-WireConnection;20;0;19;0
 WireConnection;17;0;16;4
 WireConnection;17;1;18;0
 WireConnection;11;1;23;0
@@ -3623,12 +3122,8 @@ WireConnection;1;1;12;0
 WireConnection;1;2;17;0
 WireConnection;1;9;24;0
 WireConnection;1;4;36;0
-WireConnection;1;6;37;0
-WireConnection;1;7;38;0
-WireConnection;38;0;49;0
-WireConnection;49;0;46;4
-WireConnection;49;2;51;0
-WireConnection;51;0;50;0
-WireConnection;50;0;46;4
+WireConnection;19;0;21;0
+WireConnection;19;1;22;0
+WireConnection;20;0;19;0
 ASEEND*/
-//CHKSM=EA1F97D1FF7FCF0AACF9AF30846FC96A978F8862
+//CHKSM=21C06D7C644C4AE90A4B215153A33F59544B99B8

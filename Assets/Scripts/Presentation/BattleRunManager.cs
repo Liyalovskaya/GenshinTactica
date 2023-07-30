@@ -18,8 +18,8 @@ namespace GT.Presentation
             Application.targetFrameRate = 170;
             BattleRun = new BattleRun(battleMapObject.battleMap);
             BattleRun.BattleMap.Size = battleMapObject.size;
-            var klee = new Actor("Klee", BattleRun.BattleMap.GetGrid(8, 5));
-            var bucket = new Actor("bucket", BattleRun.BattleMap.GetGrid(11, 8));
+            var klee = new Actor("Klee", BattleRun.BattleMap.GetGrid(8, 0, 5));
+            var bucket = new Actor("bucket", BattleRun.BattleMap.GetGrid(11, 0, 8));
             klee.Type = ActorType.Player;
             bucket.Type = ActorType.Enemy;
             BattleRun.SetActor(klee);
@@ -31,11 +31,12 @@ namespace GT.Presentation
 
         private void Update()
         {
-            if(InputLock) return;
+            if (InputLock) return;
             if (Input.GetKeyDown(KeyCode.A))
             {
                 BattleMapManager.Instance.ShowIndicators(
-                    BattleRun.BattleMap.GridsInRange(BattleRun.CurrentActor.BattleGrid, BattleRun.CurrentActor.MoveAbility));
+                    BattleRun.BattleMap.GridsInRange(BattleRun.CurrentActor.BattleGrid,
+                        BattleRun.CurrentActor.MoveAbility));
                 BattleMapManager.Instance.MoveMode = true;
             }
 

@@ -23,7 +23,6 @@ namespace GT.Core
         }
 
 
-        
         public void BuildConnection()
         {
             foreach (var grid in BattleMap.battleGrids)
@@ -31,21 +30,24 @@ namespace GT.Core
                 grid.Neighbors?.Clear();
                 grid.Neighbors = new List<GridNeighbor>();
                 foreach (var other in BattleMap.battleGrids.Where(other =>
-                             !other.Equals(grid) && grid.DistanceTo(other) < 1.5f))
+                             !other.Equals(grid) &&
+                             grid.DistanceTo(other) < 1.5f &&
+                             grid.gridIdentifier == GridIdentifier.Empty &&
+                             grid.height == other.height))
                 {
                     if (other.x == grid.x || other.y == grid.y)
                     {
-                        // map.gridConnections.Add(new Connection(grid, other, 1));
-                        grid.Neighbors.Add(new GridNeighbor(other,100));
+                        grid.Neighbors.Add(new GridNeighbor(other, 1));
                     }
                     else
                     {
                         var offsetX = other.x - grid.x;
                         var offsetY = other.y - grid.y;
-                        if (BattleMap.GetGrid(grid.x + offsetX, grid.y) == null) continue;
-                        if (BattleMap.GetGrid(grid.x, grid.y + offsetY) == null) continue;
-                        // map.gridConnections.Add(new Connection(grid, other, 1.414f));
-                        grid.Neighbors.Add(new GridNeighbor(other,141));
+                        var neighborX = BattleMap.GetGrid(grid.x + offsetX, grid.height, grid.y);
+                        if (neighborX == null || neighborX.cornerBlock) continue;
+                        var neighborY = BattleMap.GetGrid(grid.x, grid.height, grid.y + offsetY);
+                        if (neighborY == null || neighborY.cornerBlock) continue;
+                        grid.Neighbors.Add(new GridNeighbor(other, 1.414f));
                     }
                 }
             }

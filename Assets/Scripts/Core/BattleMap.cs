@@ -13,21 +13,32 @@ namespace GT.Core
         public List<BattleGrid> battleGrids = new List<BattleGrid>();
 
         // public List<Connection> gridConnections = new List<Connection>();
-        public BattleGrid GetGrid(int x, int y)
+        public BattleGrid GetGrid(int x, int height, int y)
         {
-            return battleGrids.FirstOrDefault(grid => grid.x == x && grid.y == y);
+            return battleGrids.FirstOrDefault(grid =>
+                grid.x == x &&
+                grid.height == height &&
+                grid.y == y);
+        }
+
+        public BattleGrid GetGrid(Vector3 coord)
+        {
+            return battleGrids.FirstOrDefault(grid =>
+                grid.x == (int)coord.x &&
+                grid.height == (int)coord.y &&
+                grid.y == (int)coord.z);
         }
 
         public List<BattleGrid> GridsInRange(BattleGrid start, float range)
         {
             var num = battleGrids.Count;
-            var dist = new int[num];
+            var dist = new float[num];
             var visited = new bool[num];
             var prev = new int[num];
 
             for (int i = 0; i < num; i++)
             {
-                dist[i] = 0x3f3f3f3f;
+                dist[i] = float.MaxValue;
                 prev[i] = -1;
                 visited[i] = false;
             }
@@ -40,13 +51,13 @@ namespace GT.Core
                 visited[u] = true;
                 for (int j = 0; j < battleGrids[u].Neighbors.Count; j++)
                 {
-                    var neigbor = battleGrids[u].Neighbors[j];
-                    if (!visited[neigbor.End] && neigbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
-                        dist[u] + neigbor.Weight < dist[neigbor.End]
+                    var neighbor = battleGrids[u].Neighbors[j];
+                    if (!visited[neighbor.End] && neighbor.Weight != 0 && dist[u] != float.MaxValue &&
+                        dist[u] + neighbor.Weight < dist[neighbor.End]
                        )
                     {
-                        dist[neigbor.End] = dist[u] + neigbor.Weight;
-                        prev[neigbor.End] = u;
+                        dist[neighbor.End] = dist[u] + neighbor.Weight;
+                        prev[neighbor.End] = u;
                     }
                 }
             }
@@ -56,7 +67,7 @@ namespace GT.Core
 
             for (int i = 0; i < num; i++)
             {
-                if (i != start.idx && dist[i] / 100f <= range)
+                if (i != start.idx && dist[i] <= range)
                 {
                     result.Add(battleGrids[i]);
                 }
@@ -65,16 +76,16 @@ namespace GT.Core
             return result;
         }
 
-        public List<BattleGrid> ShortestPath(BattleGrid g1, BattleGrid g2)
+        public float DistanceOf(BattleGrid g1, BattleGrid g2)
         {
             var num = battleGrids.Count;
-            var dist = new int[num];
+            var dist = new float[num];
             var visited = new bool[num];
             var prev = new int[num];
 
             for (int i = 0; i < num; i++)
             {
-                dist[i] = 0x3f3f3f3f;
+                dist[i] = float.MaxValue;
                 prev[i] = -1;
                 visited[i] = false;
             }
@@ -88,8 +99,9 @@ namespace GT.Core
                 for (int j = 0; j < battleGrids[u].Neighbors.Count; j++)
                 {
                     var neighbor = battleGrids[u].Neighbors[j];
-                    if (!visited[neighbor.End] && neighbor.Weight != 0 && dist[u] != 0x3f3f3f3f &&
-                        dist[u] + neighbor.Weight < dist[neighbor.End] && neighbor.BattleGrid.GridState == GridState.Empty 
+                    if (!visited[neighbor.End] && neighbor.Weight != 0 && dist[u] != float.MaxValue &&
+                        dist[u] + neighbor.Weight < dist[neighbor.End] &&
+                        neighbor.BattleGrid.GridState == GridState.Empty
                        )
                     {
                         dist[neighbor.End] = dist[u] + neighbor.Weight;
@@ -98,7 +110,45 @@ namespace GT.Core
                 }
             }
 
-            if (dist[g2.idx] != 0x3f3f3f3f)
+            return dist[g2.idx];
+        }
+
+
+        public BattleMapPath ShortestPath(BattleGrid g1, BattleGrid g2)
+        {
+            var num = battleGrids.Count;
+            var dist = new float[num];
+            var visited = new bool[num];
+            var prev = new int[num];
+
+            for (int i = 0; i < num; i++)
+            {
+                dist[i] = float.MaxValue;
+                prev[i] = -1;
+                visited[i] = false;
+            }
+
+            dist[g1.idx] = 0;
+
+            for (int i = 0; i < num - 1; i++)
+            {
+                var u = MinDistance(dist, visited, num);
+                visited[u] = true;
+                for (int j = 0; j < battleGrids[u].Neighbors.Count; j++)
+                {
+                    var neighbor = battleGrids[u].Neighbors[j];
+                    if (!visited[neighbor.End] && neighbor.Weight != 0 && dist[u] != float.MaxValue &&
+                        dist[u] + neighbor.Weight < dist[neighbor.End] &&
+                        neighbor.BattleGrid.GridState == GridState.Empty
+                       )
+                    {
+                        dist[neighbor.End] = dist[u] + neighbor.Weight;
+                        prev[neighbor.End] = u;
+                    }
+                }
+            }
+
+            if (dist[g2.idx] != float.MaxValue)
             {
                 var result = new List<BattleGrid>();
                 var pathIdx = g2.idx;
@@ -109,17 +159,17 @@ namespace GT.Core
                 }
 
                 result.Reverse();
-                return result;
+                return new BattleMapPath(g1, result, dist[g2.idx]);
             }
             else
             {
-                return null;
+                return new BattleMapPath(g1, null, float.MaxValue);
             }
         }
 
-        private int MinDistance(int[] dist, bool[] visited, int num)
+        private int MinDistance(float[] dist, bool[] visited, int num)
         {
-            float min = 0x3f3f3f3f;
+            var min = float.MaxValue;
             var minIdx = -1;
             for (int i = 0; i < num; i++)
             {
@@ -134,12 +184,21 @@ namespace GT.Core
         }
     }
 
+    public class BattleGridLink
+    {
+        public BattleGrid Grid1, Grid2;
+        public int ApCost = 1;
+    }
+
+
     [Serializable]
     public class BattleGrid
     {
         public int idx, x, y, height;
         public List<GridNeighbor> Neighbors = new List<GridNeighbor>();
         public Actor Actor = null;
+        public GridIdentifier gridIdentifier;
+        public bool cornerBlock = false;
 
         public GridState GridState
         {
@@ -156,12 +215,14 @@ namespace GT.Core
             }
         }
 
-        public BattleGrid(int idx, int x, int y, int height)
+        public BattleGrid(int idx, Vector3 coord, GridIdentifier identifier, bool cornerBlock = false)
         {
             this.idx = idx;
-            this.x = x;
-            this.y = y;
-            this.height = height;
+            this.x = (int)coord.x;
+            this.y = (int)coord.z;
+            this.height = Mathf.FloorToInt(coord.y);
+            this.gridIdentifier = identifier;
+            this.cornerBlock = cornerBlock;
         }
 
         public float DistanceTo(BattleGrid grid)
@@ -174,20 +235,24 @@ namespace GT.Core
             return $"({x},{y})";
         }
 
-        public Vector3 GetXYPosition()
+        public Vector3 GetXYCoordinate()
         {
             return new Vector3(x, 0, y);
         }
-        
+
+        public Vector3 GetCoordinate()
+        {
+            return new Vector3(x, height, y);
+        }
     }
-    
+
     public class GridNeighbor
     {
         public BattleGrid BattleGrid;
         public readonly int End;
-        public readonly int Weight;
+        public readonly float Weight;
 
-        public GridNeighbor(BattleGrid grid, int w)
+        public GridNeighbor(BattleGrid grid, float w)
         {
             BattleGrid = grid;
             End = grid.idx;
@@ -195,11 +260,35 @@ namespace GT.Core
         }
     }
 
+    public struct BattleMapPath
+    {
+        public BattleGrid StartGrid;
+        public List<BattleGrid> PathGrids;
+        public float Distance;
+
+        public BattleMapPath(BattleGrid startGrid, List<BattleGrid> path, float distance)
+        {
+            StartGrid = startGrid;
+            PathGrids = path;
+            Distance = distance;
+        }
+
+        public int Count => PathGrids.Count + 1;
+    }
+
+
     public enum GridState
     {
         Empty,
         Player,
         Ally,
         Enemy,
+    }
+
+    public enum GridIdentifier
+    {
+        Empty,
+        SolidBarricade,
+        ShortBarricade,
     }
 }

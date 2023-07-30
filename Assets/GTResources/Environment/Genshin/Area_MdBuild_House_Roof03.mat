@@ -112,7 +112,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _Metallic: 0
-    - _NormalScale: 1
+    - _NormalScale: -1
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueControl: 0
@@ -124,7 +124,11 @@ Material:
     - _SpecularScale: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
-    - _StencilRef: 0
+    - _StencilComp: 8
+    - _StencilFail: 0
+    - _StencilPass: 0
+    - _StencilRef: 8
+    - _StencilZFail: 0
     - _Surface: 0
     - _WorkflowMode: 1
     - _ZWrite: 1

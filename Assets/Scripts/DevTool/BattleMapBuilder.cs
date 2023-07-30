@@ -22,13 +22,10 @@ namespace GT.DevTool
                 // gridConnections = new List<Connection>()
             };
             var idx = 0;
-            foreach (var grid in GetComponentsInChildren<MeshRenderer>())
+            foreach (var grid in GetComponentsInChildren<BattleMapIdentifier>())
             {
                 var pos = grid.transform.localPosition;
-                var x = (int)pos.x;
-                var y = (int)pos.z;
-                var height = Mathf.FloorToInt(pos.y);
-                map.battleGrids.Add(new BattleGrid(idx++, x, y, height));
+                map.battleGrids.Add(new BattleGrid(idx++, pos, grid.gridIdentifier, grid.cornerBlock));
             }
 
             // BuildConnection(map);

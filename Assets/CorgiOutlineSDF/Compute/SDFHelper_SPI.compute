@@ -1,0 +1,8 @@
+#pragma kernel ClearMask
+#pragma kernel ClearSDF
+#pragma kernel Initialize
+#pragma kernel Step
+#pragma kernel SubtractMask
+
+#define CORGI_SPI_ENABLED
+#include "Includes/SDFHelper.cginc" 

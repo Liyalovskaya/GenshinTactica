@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7530846732622535930}
   - component: {fileID: 6162369146105288358}
   - component: {fileID: 5123578838375909531}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: GridLifting
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -95,7 +95,7 @@ GameObject:
   - component: {fileID: 4272795133696958268}
   - component: {fileID: 4272795133696958269}
   - component: {fileID: 4812816475193369388}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: GridIndicator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -198,7 +198,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1772924854650532977}
   - component: {fileID: 1488145804107432639}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: GridIndicator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -220,7 +220,7 @@ Transform:
   - {fileID: 4272795133696958270}
   - {fileID: 7530846732622535930}
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1488145804107432639
 MonoBehaviour:
@@ -239,6 +239,8 @@ MonoBehaviour:
     x: 0
     y: 0
     height: 0
+    gridIdentifier: 0
+    cornerBlock: 0
   indRenderer: {fileID: 4272795133696958269}
   liftRenderer: {fileID: 5123578838375909531}
   defaultTexture: {fileID: 2800000, guid: f6630bcb3cec67a4dbd4b9fb2ae1d9f9, type: 3}

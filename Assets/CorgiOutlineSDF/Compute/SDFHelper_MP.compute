@@ -1,0 +1,7 @@
+#pragma kernel ClearMask
+#pragma kernel ClearSDF
+#pragma kernel Initialize
+#pragma kernel Step
+#pragma kernel SubtractMask
+
+#include "Includes/SDFHelper.cginc" 
